@@ -21,8 +21,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
   --clock-size:1.0;
   --info-size:1.0;
   --panel-size:1.0;
-  /* JS が実測した左カラム幅(px)をここに書き込む */
-  --left-w:400;
+  --fs-clock:80px;
+  --fs-sec:32px;
+  /* ===== フォントスケール基準 =====
+     vh を使う際、スマホ横置き(高さ≈360px)では 1vh=3.6px。
+     最低限読めるフォントサイズ = 11px = 3.1vh。
+     以下の --ui-* 変数で一括管理する。 */
+  --ui-xs:  max(11px, 2.8vh);   /* ヒント・補助テキスト */
+  --ui-sm:  max(12px, 3.2vh);   /* ラベル・タグ */
+  --ui-md:  max(14px, 3.8vh);   /* 本文・入力フォーム */
+  --ui-lg:  max(16px, 4.4vh);   /* 見出し・予定タイトル */
+  --ui-xl:  max(18px, 5.0vh);   /* セクション見出し */
+  --tap-min: max(44px, 11vh);   /* 最小タップ領域 */
 }
 
 .root{width:100vw;height:100vh;background:#04060d;overflow:hidden;font-family:'Inter','Noto Sans JP',sans-serif;display:flex}
@@ -34,188 +44,198 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
 .c-bl{bottom:6px;left:6px;border-bottom:1px solid rgba(125,211,252,0.45);border-left:1px solid rgba(125,211,252,0.45)}
 .c-br{bottom:6px;right:6px;border-bottom:1px solid rgba(125,211,252,0.45);border-right:1px solid rgba(125,211,252,0.45)}
 
-/* 左60% 右40% に変更 — 時計優先 */
-.left{width:60%;display:flex;flex-direction:column;justify-content:center;align-items:stretch;position:relative;z-index:1;border-right:1px solid rgba(125,211,252,0.12);padding:2% 2% 2% 3%;gap:1.2vh}
+.left{width:60%;display:flex;flex-direction:column;justify-content:center;align-items:stretch;position:relative;z-index:1;border-right:1px solid rgba(125,211,252,0.12);padding:2% 2% 2% 3%;gap:1.5vh}
 .right{width:40%;display:flex;flex-direction:column;position:relative;z-index:1}
 
-/* ==================================================
-   CLOCK
-   font-size は JS が左カラム実幅から計算して
-   CSS変数 --fs-clock / --fs-sec に書き込む。
-   セル幅 = font-size × 1.58（Orbitron最大グリフ係数）
-   秒セル幅 = font-size_sec × 1.58
-================================================== */
+/* ===== CLOCK ===== */
 .clock-section{display:flex;flex-direction:column;width:100%}
-
 .clock-label{
-  font-size:calc(1.4vh * var(--info-size));
-  letter-spacing:0.28em;color:rgba(125,211,252,0.7);
-  text-transform:uppercase;font-weight:400;margin-bottom:0.6vh;
+  font-size:calc(var(--ui-sm) * var(--info-size));
+  letter-spacing:0.28em;color:rgba(125,211,252,0.75);
+  text-transform:uppercase;font-weight:400;margin-bottom:0.8vh;
 }
+.clock-row{display:flex;align-items:center;width:100%}
 
-.clock-row{
-  display:flex;
-  align-items:center; /* 縦中央揃え — ドットの位置合わせ基準 */
-  width:100%;
-}
-
-/* 時・分セル */
-.digit-cell{
-  flex:0 0 auto;
-  /* 幅はJSが --fs-clock を元に計算して inline style で設定 */
-  display:flex;flex-direction:column;align-items:center;
-  overflow:visible; /* clampで必ず収めるのでhiddenは不要 */
-}
-.digit{
-  font-family:'Orbitron',monospace;font-weight:900;
-  font-size:var(--fs-clock,80px);
-  color:#7dd3fc;
-  line-height:1;
-  letter-spacing:0;
-  display:block;text-align:center;width:100%;
-}
+/* 時・分セル — JSが幅を実測設定 */
+.digit-cell{flex:0 0 auto;display:flex;flex-direction:column;align-items:center}
+.digit{font-family:'Orbitron',monospace;font-weight:900;font-size:var(--fs-clock,80px);color:#7dd3fc;line-height:1;letter-spacing:0;display:block;text-align:center;width:100%}
 .digit-lbl{
-  font-size:calc(var(--fs-clock,80px) * 0.10);
-  letter-spacing:0.24em;color:rgba(125,211,252,0.55);
-  text-transform:uppercase;text-align:center;
-  margin-top:0.3vh;font-weight:300;width:100%;
+  font-size:calc(var(--fs-clock,80px) * 0.13);
+  letter-spacing:0.24em;color:rgba(125,211,252,0.6);
+  text-transform:uppercase;text-align:center;margin-top:0.5vh;font-weight:300;width:100%;
 }
 
-/* ドット区切り
-   align-items:center の中に置くことで数字の縦中心に揃う。
-   幅は細く固定して数字幅を最大化する。 */
-.dot-sep{
-  flex:0 0 auto;
-  width:calc(var(--fs-clock,80px) * 0.18);
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  gap:calc(var(--fs-clock,80px) * 0.18);
-  /* digit は line-height:1 なので高さ = font-size。
-     ドットを数字の "cap高さ" 中心に合わせるため
-     上方向に少しオフセット（Orbitronのcap高さ≒0.72em）*/
-  margin-bottom:calc(var(--fs-clock,80px) * 0.14);
-}
-.dot-sep span{
-  display:block;
-  width:calc(var(--fs-clock,80px) * 0.09);
-  height:calc(var(--fs-clock,80px) * 0.09);
-  border-radius:50%;background:#7dd3fc;opacity:0.6;
-  flex-shrink:0;
-  animation:blink 1s step-end infinite;
-}
+/* ドット区切り */
+.dot-sep{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:calc(var(--fs-clock,80px)*0.14)}
+.dot-sep span{display:block;border-radius:50%;background:#7dd3fc;opacity:0.6;flex-shrink:0;animation:blink 1s step-end infinite}
 @keyframes blink{50%{opacity:0.1}}
 
-/* 秒セル */
+/* 秒セル
+   align-self を使わず digit-cell と同じ flex コンテキストに置く。
+   SEC ラベルを digit-lbl と同じ margin-top にすることで縦位置が揃う。 */
 .sec-cell{
   flex:0 0 auto;
   display:flex;flex-direction:column;align-items:center;
   border-left:1px solid rgba(125,211,252,0.18);
-  padding-left:calc(var(--fs-clock,80px) * 0.12);
-  margin-left:calc(var(--fs-clock,80px) * 0.10);
-  /* 秒は数字の下端に合わせる */
-  align-self:flex-end;
-  margin-bottom:calc(var(--fs-clock,80px) * 0.08);
 }
 .sec-digit{
   font-family:'Orbitron',monospace;font-weight:900;
   font-size:var(--fs-sec,32px);
-  color:rgba(125,211,252,0.45);
-  line-height:1;letter-spacing:0;
+  color:rgba(125,211,252,0.45);line-height:1;letter-spacing:0;
   display:block;text-align:center;
-  /* 2桁が必ず収まる幅 */
-  width:calc(var(--fs-sec,32px) * 1.58);
 }
 .sec-lbl{
-  font-size:calc(var(--fs-sec,32px) * 0.28);
-  letter-spacing:0.22em;color:rgba(125,211,252,0.4);
-  text-transform:uppercase;text-align:center;
-  margin-top:0.3vh;font-weight:300;
-  width:calc(var(--fs-sec,32px) * 1.58);
+  /* digit-lbl と完全に同じプロパティで揃える */
+  font-size:calc(var(--fs-clock,80px) * 0.13);
+  letter-spacing:0.24em;color:rgba(125,211,252,0.45);
+  text-transform:uppercase;text-align:center;margin-top:0.5vh;font-weight:300;
 }
 
-/* 日付・天気 */
+/* ===== DATE / WEATHER ===== */
 .meta-row{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
-.date-main{font-size:calc(2.0vh * var(--info-size));font-weight:500;color:rgba(255,255,255,0.9);letter-spacing:0.07em}
-.date-sub{font-size:calc(1.5vh * var(--info-size));font-weight:300;color:rgba(255,255,255,0.55);letter-spacing:0.16em;margin-top:0.3vh;text-transform:uppercase}
-.divider-v{width:1px;height:4vh;background:rgba(125,211,252,0.2);flex-shrink:0}
-.weather-block{display:flex;align-items:center;gap:1.0vw;flex-shrink:0}
-.wx-icon{flex-shrink:0;width:calc(2.8vh * var(--info-size));height:calc(2.8vh * var(--info-size))}
-.wx-temp{font-family:'Orbitron',monospace;font-size:calc(2.4vh * var(--info-size));font-weight:900;color:rgba(255,255,255,0.92);letter-spacing:0.02em}
-.wx-right{display:flex;flex-direction:column;gap:2px}
-.wx-loc{font-size:calc(1.4vh * var(--info-size));letter-spacing:0.14em;color:rgba(125,211,252,0.8);text-transform:uppercase;font-weight:500}
-.wx-desc{font-size:calc(1.2vh * var(--info-size));color:rgba(255,255,255,0.52);letter-spacing:0.05em}
+.date-main{font-size:calc(var(--ui-lg) * var(--info-size));font-weight:500;color:rgba(255,255,255,0.92);letter-spacing:0.07em}
+.date-sub{font-size:calc(var(--ui-md) * var(--info-size));font-weight:300;color:rgba(255,255,255,0.58);letter-spacing:0.16em;margin-top:0.4vh;text-transform:uppercase}
+.divider-v{width:1px;height:5vh;background:rgba(125,211,252,0.2);flex-shrink:0}
+.weather-block{display:flex;align-items:center;gap:1.2vw;flex-shrink:0}
+.wx-icon{flex-shrink:0;width:calc(var(--ui-xl) * var(--info-size));height:calc(var(--ui-xl) * var(--info-size))}
+.wx-temp{font-family:'Orbitron',monospace;font-size:calc(var(--ui-xl) * var(--info-size));font-weight:900;color:rgba(255,255,255,0.94);letter-spacing:0.02em}
+.wx-right{display:flex;flex-direction:column;gap:3px}
+.wx-loc{font-size:calc(var(--ui-sm) * var(--info-size));letter-spacing:0.16em;color:rgba(125,211,252,0.85);text-transform:uppercase;font-weight:500}
+.wx-desc{font-size:calc(var(--ui-sm) * var(--info-size));color:rgba(255,255,255,0.55);letter-spacing:0.05em}
 
-/* 右パネル — フォントを vh ベースにして視認性UP */
-.tab-bar{display:flex;border-bottom:1px solid rgba(125,211,252,0.12);flex-shrink:0;height:4vh}
-.tab{flex:1;display:flex;align-items:center;justify-content:center;font-size:calc(1.4vh * var(--panel-size));letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.38);cursor:pointer;border-bottom:1.5px solid transparent;transition:all 0.2s;font-weight:400;margin-bottom:-1px}
-.tab.on{color:#7dd3fc;border-bottom-color:#7dd3fc;background:rgba(125,211,252,0.04)}
+/* ===== RIGHT PANEL ===== */
+/* タブ: 高さを--tap-minにしてタップしやすく */
+.tab-bar{display:flex;border-bottom:1px solid rgba(125,211,252,0.12);flex-shrink:0;height:var(--tap-min)}
+.tab{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  font-size:calc(var(--ui-sm) * var(--panel-size));
+  letter-spacing:0.16em;text-transform:uppercase;
+  color:rgba(255,255,255,0.42);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all 0.2s;font-weight:400;margin-bottom:-1px;
+}
+.tab.on{color:#7dd3fc;border-bottom-color:#7dd3fc;background:rgba(125,211,252,0.05)}
 
 .panels{flex:1;position:relative;overflow:hidden}
-.panel{position:absolute;inset:0;padding:1.5vh 2.5% 1vh;opacity:0;transform:translateY(8px);transition:opacity 0.22s,transform 0.22s;pointer-events:none;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:1.2vh}
+.panel{position:absolute;inset:0;padding:1.8vh 4% 1vh;opacity:0;transform:translateY(8px);transition:opacity 0.22s,transform 0.22s;pointer-events:none;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:1.5vh}
 .panel.on{opacity:1;transform:translateY(0);pointer-events:auto}
 
-.sect-lbl{font-size:calc(1.2vh * var(--panel-size));letter-spacing:0.24em;color:rgba(125,211,252,0.7);text-transform:uppercase;font-weight:400;flex-shrink:0}
-.sched-row{display:flex;gap:1.0%;align-items:stretch}
-.sched-t{font-family:'Orbitron',monospace;font-size:calc(1.5vh * var(--panel-size));color:rgba(125,211,252,0.9);white-space:nowrap;padding-top:1px;min-width:5.5ch;flex-shrink:0}
-.sched-line{width:1px;background:rgba(125,211,252,0.2);flex-shrink:0;margin:2px 0}
-.sched-info{padding-left:1.5%}
-.sched-name{font-size:calc(1.7vh * var(--panel-size));color:rgba(255,255,255,0.9);font-weight:500;line-height:1.25}
-.sched-loc{font-size:calc(1.3vh * var(--panel-size));color:rgba(255,255,255,0.5);margin-top:0.2vh;letter-spacing:0.04em}
-.no-events{font-size:calc(1.4vh * var(--panel-size));color:rgba(255,255,255,0.28);letter-spacing:0.1em;text-transform:uppercase;padding:1vh 0}
+.sect-lbl{font-size:calc(var(--ui-xs) * var(--panel-size));letter-spacing:0.26em;color:rgba(125,211,252,0.75);text-transform:uppercase;font-weight:500;flex-shrink:0}
+.sched-row{display:flex;gap:3%;align-items:flex-start}
+.sched-t{font-family:'Orbitron',monospace;font-size:calc(var(--ui-md) * var(--panel-size));color:rgba(125,211,252,0.92);white-space:nowrap;padding-top:2px;min-width:5ch;flex-shrink:0}
+.sched-line{width:1px;background:rgba(125,211,252,0.22);flex-shrink:0;align-self:stretch}
+.sched-info{padding-left:3%}
+.sched-name{font-size:calc(var(--ui-lg) * var(--panel-size));color:rgba(255,255,255,0.92);font-weight:500;line-height:1.3}
+.sched-loc{font-size:calc(var(--ui-sm) * var(--panel-size));color:rgba(255,255,255,0.52);margin-top:0.3vh;letter-spacing:0.04em}
+.no-events{font-size:calc(var(--ui-md) * var(--panel-size));color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-transform:uppercase;padding:1.5vh 0}
 
-.news-card{border-left:1.5px solid rgba(125,211,252,0.32);padding-left:2%}
-.news-src{font-size:calc(1.1vh * var(--panel-size));letter-spacing:0.2em;text-transform:uppercase;color:rgba(125,211,252,0.75);margin-bottom:0.3vh;font-weight:500}
-.news-ttl{font-size:calc(1.55vh * var(--panel-size));color:rgba(255,255,255,0.85);line-height:1.35;font-weight:400}
-.news-ago{font-size:calc(1.1vh * var(--panel-size));color:rgba(255,255,255,0.38);margin-top:0.2vh}
-.news-loading{font-size:calc(1.4vh * var(--panel-size));color:rgba(255,255,255,0.28);letter-spacing:0.1em;text-transform:uppercase;padding:1vh 0}
+.news-card{border-left:2px solid rgba(125,211,252,0.35);padding-left:4%}
+.news-src{font-size:calc(var(--ui-xs) * var(--panel-size));letter-spacing:0.2em;text-transform:uppercase;color:rgba(125,211,252,0.8);margin-bottom:0.4vh;font-weight:500}
+.news-ttl{font-size:calc(var(--ui-md) * var(--panel-size));color:rgba(255,255,255,0.88);line-height:1.4;font-weight:400}
+.news-ago{font-size:calc(var(--ui-xs) * var(--panel-size));color:rgba(255,255,255,0.4);margin-top:0.3vh}
+.news-loading{font-size:calc(var(--ui-md) * var(--panel-size));color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-transform:uppercase;padding:1.5vh 0}
 
-.quake-box{border:1px solid rgba(248,113,113,0.4);border-radius:2px;padding:1.2vh 2.5%;background:rgba(248,60,60,0.05)}
-.quake-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5vh}
-.quake-badge{font-size:calc(1.1vh * var(--panel-size));letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,113,113,0.9);font-weight:500}
-.quake-int{font-family:'Orbitron',monospace;font-size:calc(2.8vh * var(--panel-size));color:#f87171;font-weight:900;line-height:1}
-.quake-body{font-size:calc(1.5vh * var(--panel-size));color:rgba(255,255,255,0.68);line-height:1.7}
-.quake-mag{font-family:'Orbitron',monospace;font-size:calc(1.4vh * var(--panel-size));color:rgba(255,170,150,0.9)}
-.no-alert{display:flex;align-items:center;gap:1%;padding:1vh 0;opacity:0.65}
-.no-alert-txt{font-size:calc(1.4vh * var(--panel-size));letter-spacing:0.12em;color:#7dd3fc;text-transform:uppercase}
+.quake-box{border:1px solid rgba(248,113,113,0.45);border-radius:3px;padding:1.5vh 4%;background:rgba(248,60,60,0.06)}
+.quake-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6vh}
+.quake-badge{font-size:calc(var(--ui-xs) * var(--panel-size));letter-spacing:0.16em;text-transform:uppercase;color:rgba(248,113,113,0.92);font-weight:500}
+.quake-int{font-family:'Orbitron',monospace;font-size:calc(var(--ui-xl) * var(--panel-size) * 1.4);color:#f87171;font-weight:900;line-height:1}
+.quake-body{font-size:calc(var(--ui-md) * var(--panel-size));color:rgba(255,255,255,0.7);line-height:1.7}
+.quake-mag{font-family:'Orbitron',monospace;font-size:calc(var(--ui-sm) * var(--panel-size));color:rgba(255,170,150,0.9)}
+.no-alert{display:flex;align-items:center;gap:2%;padding:1.5vh 0;opacity:0.7}
+.no-alert-txt{font-size:calc(var(--ui-md) * var(--panel-size));letter-spacing:0.12em;color:#7dd3fc;text-transform:uppercase}
 
-.swipe-dots{position:absolute;right:3px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:3px}
-.sdot{width:2px;height:2px;border-radius:50%;background:rgba(255,255,255,0.2);transition:background 0.2s}
-.sdot.on{background:#7dd3fc}
+/* swipe-dots: もう少し大きく */
+.swipe-dots{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:5px}
+.sdot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.22);transition:background 0.2s,transform 0.2s}
+.sdot.on{background:#7dd3fc;transform:scale(1.4)}
 
-.foot{display:flex;align-items:center;justify-content:space-between;padding:0 2.5%;height:3vh;border-top:1px solid rgba(125,211,252,0.08);flex-shrink:0}
-.st-dots{display:flex;gap:3px;align-items:center}
-.st-dot{width:3px;height:3px;border-radius:50%;background:rgba(125,211,252,0.45);animation:pulse 2.2s ease-in-out infinite}
+/* フッター: 設定ボタンのタップ領域を十分確保 */
+.foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(125,211,252,0.1);flex-shrink:0;height:var(--tap-min)}
+.st-dots{display:flex;gap:4px;align-items:center;padding-left:4%}
+.st-dot{width:4px;height:4px;border-radius:50%;background:rgba(125,211,252,0.4);animation:pulse 2.2s ease-in-out infinite}
 .st-dot:nth-child(2){animation-delay:0.55s}
 .st-dot:nth-child(3){animation-delay:1.1s}
-@keyframes pulse{0%,100%{opacity:0.15}50%{opacity:1}}
-.settings-btn{width:2.5vh;height:2.5vh;cursor:pointer;opacity:0.55;transition:opacity 0.2s}
-.settings-btn:hover{opacity:1}
+@keyframes pulse{0%,100%{opacity:0.12}50%{opacity:1}}
 
-/* SETTINGS */
+/* 設定ボタン: タップ領域をフッター全高×右半分に拡張 */
+.settings-btn-wrap{
+  display:flex;align-items:center;justify-content:center;
+  height:100%;
+  padding:0 4% 0 6%;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.settings-btn-wrap svg{
+  width:max(22px,5.5vh);height:max(22px,5.5vh);
+  opacity:0.65;transition:opacity 0.2s;
+}
+.settings-btn-wrap:active svg{opacity:1}
+
+/* ===== SETTINGS OVERLAY ===== */
 .overlay{position:absolute;inset:0;background:#04060d;z-index:20;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1)}
 .overlay.open{transform:translateX(0)}
-.ov-hdr{display:flex;align-items:center;justify-content:space-between;padding:1.5vh 3%;border-bottom:1px solid rgba(125,211,252,0.12);flex-shrink:0}
-.ov-title{font-size:1.6vh;letter-spacing:0.24em;text-transform:uppercase;color:#7dd3fc;font-weight:500}
-.close-btn{width:2vh;height:2vh;cursor:pointer;opacity:0.55;transition:opacity 0.2s}
-.close-btn:hover{opacity:1}
-.ov-body{flex:1;overflow-y:auto;padding:1.5vh 3%;scrollbar-width:thin;scrollbar-color:rgba(125,211,252,0.2) transparent;display:flex;flex-direction:column;gap:1.8vh}
-.s-sec-ttl{font-size:1.2vh;letter-spacing:0.26em;text-transform:uppercase;color:rgba(125,211,252,0.7);margin-bottom:1vh;font-weight:400;padding-bottom:0.4vh;border-bottom:1px solid rgba(125,211,252,0.1)}
-.s-row{margin-bottom:1vh}
-.s-lbl{font-size:1.3vh;color:rgba(255,255,255,0.6);margin-bottom:0.4vh;letter-spacing:0.08em;display:flex;justify-content:space-between;align-items:center}
-.s-val{font-family:'Orbitron',monospace;font-size:1.3vh;color:#7dd3fc}
-.s-in{width:100%;background:rgba(125,211,252,0.05);border:1px solid rgba(125,211,252,0.2);border-radius:2px;padding:0.6vh 1%;font-size:1.3vh;color:rgba(255,255,255,0.85);font-family:'Inter','Noto Sans JP',sans-serif;outline:none;transition:border-color 0.2s}
-.s-in:focus{border-color:rgba(125,211,252,0.55)}
-.s-in::placeholder{color:rgba(255,255,255,0.2)}
-.s-slider{width:100%;accent-color:#7dd3fc;cursor:pointer}
-.rss-list{display:flex;flex-direction:column;gap:0.6vh}
-.rss-item{display:flex;align-items:center;gap:1%}
-.rss-del{width:2vh;height:2vh;flex-shrink:0;cursor:pointer;opacity:0.45;transition:opacity 0.2s}
-.rss-del:hover{opacity:0.9}
-.add-btn{display:flex;align-items:center;gap:4px;font-size:1.3vh;color:rgba(125,211,252,0.65);cursor:pointer;letter-spacing:0.12em;padding:0.6vh 0;transition:color 0.2s;background:none;border:none;font-family:inherit}
-.add-btn:hover{color:#7dd3fc}
-.save-btn{width:100%;padding:1.0vh;background:rgba(125,211,252,0.08);border:1px solid rgba(125,211,252,0.28);border-radius:2px;color:#7dd3fc;font-size:1.3vh;letter-spacing:0.24em;text-transform:uppercase;cursor:pointer;font-family:inherit;font-weight:500;transition:background 0.2s;margin-top:0.4vh}
-.save-btn:hover{background:rgba(125,211,252,0.16)}
-.s-hint{font-size:1.05vh;color:rgba(255,255,255,0.28);letter-spacing:0.04em;margin-top:0.3vh;line-height:1.5}
+.ov-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 4%;
+  border-bottom:1px solid rgba(125,211,252,0.12);
+  flex-shrink:0;
+  height:var(--tap-min);
+}
+.ov-title{font-size:var(--ui-lg);letter-spacing:0.24em;text-transform:uppercase;color:#7dd3fc;font-weight:500}
+/* 閉じるボタンもタップしやすく */
+.close-btn{
+  display:flex;align-items:center;justify-content:center;
+  width:var(--tap-min);height:100%;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  margin-right:-4%;
+}
+.close-btn svg{width:max(20px,5vh);height:max(20px,5vh);opacity:0.65;transition:opacity 0.2s}
+.close-btn:active svg{opacity:1}
+
+.ov-body{flex:1;overflow-y:auto;padding:2vh 4%;scrollbar-width:thin;scrollbar-color:rgba(125,211,252,0.2) transparent;display:flex;flex-direction:column;gap:2.5vh}
+.s-sec-ttl{font-size:var(--ui-xs);letter-spacing:0.26em;text-transform:uppercase;color:rgba(125,211,252,0.75);margin-bottom:1.2vh;font-weight:500;padding-bottom:0.6vh;border-bottom:1px solid rgba(125,211,252,0.12)}
+.s-row{margin-bottom:1.4vh}
+.s-lbl{font-size:var(--ui-sm);color:rgba(255,255,255,0.65);margin-bottom:0.6vh;letter-spacing:0.06em;display:flex;justify-content:space-between;align-items:center}
+.s-val{font-family:'Orbitron',monospace;font-size:var(--ui-sm);color:#7dd3fc}
+.s-in{
+  width:100%;background:rgba(125,211,252,0.06);
+  border:1px solid rgba(125,211,252,0.22);border-radius:3px;
+  /* タップしやすい高さ */
+  padding:max(10px,2.5vh) 3%;
+  font-size:var(--ui-md);color:rgba(255,255,255,0.88);
+  font-family:'Inter','Noto Sans JP',sans-serif;outline:none;transition:border-color 0.2s;
+}
+.s-in:focus{border-color:rgba(125,211,252,0.6)}
+.s-in::placeholder{color:rgba(255,255,255,0.22)}
+.s-slider{width:100%;accent-color:#7dd3fc;cursor:pointer;height:max(24px,6vh)}
+.rss-list{display:flex;flex-direction:column;gap:1vh}
+.rss-item{display:flex;align-items:center;gap:2%}
+/* RSSの削除ボタンもタップしやすく */
+.rss-del{
+  flex-shrink:0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;
+  display:flex;align-items:center;justify-content:center;
+  width:max(36px,9vh);height:max(36px,9vh);
+}
+.rss-del svg{width:max(16px,4vh);height:max(16px,4vh)}
+.rss-del:active{opacity:0.9}
+.add-btn{
+  display:flex;align-items:center;gap:6px;
+  font-size:var(--ui-sm);color:rgba(125,211,252,0.7);
+  cursor:pointer;letter-spacing:0.12em;
+  padding:max(10px,2.5vh) 0;
+  transition:color 0.2s;background:none;border:none;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+.add-btn:active{color:#7dd3fc}
+.save-btn{
+  width:100%;
+  padding:max(12px,3vh);
+  background:rgba(125,211,252,0.1);border:1px solid rgba(125,211,252,0.32);border-radius:3px;
+  color:#7dd3fc;font-size:var(--ui-md);letter-spacing:0.24em;text-transform:uppercase;
+  cursor:pointer;font-family:inherit;font-weight:500;transition:background 0.2s;margin-top:0.5vh;
+  -webkit-tap-highlight-color:transparent;
+}
+.save-btn:active{background:rgba(125,211,252,0.2)}
+.s-hint{font-size:var(--ui-xs);color:rgba(255,255,255,0.32);letter-spacing:0.04em;margin-top:0.5vh;line-height:1.6}
 </style>
 </head>
 <body>
@@ -224,6 +244,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
   <div class="corner c-tl"></div><div class="corner c-tr"></div>
   <div class="corner c-bl"></div><div class="corner c-br"></div>
 
+  <!-- ===== LEFT ===== -->
   <div class="left" id="leftCol">
     <div class="clock-section">
       <div class="clock-label" id="clockLabel">Local Time</div>
@@ -243,6 +264,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
         </div>
       </div>
     </div>
+
     <div class="meta-row">
       <div>
         <div class="date-main" id="dMain">----.--.--</div>
@@ -250,7 +272,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
       </div>
       <div class="divider-v"></div>
       <div class="weather-block">
-        <svg class="wx-icon" viewBox="0 0 24 24" fill="none">
+        <svg class="wx-icon" id="wxIcon" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="4.5" fill="#7dd3fc" opacity="0.75"/>
           <g stroke="#7dd3fc" stroke-width="1.3" stroke-linecap="round" opacity="0.45">
             <line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/>
@@ -268,12 +290,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
     </div>
   </div>
 
+  <!-- ===== RIGHT ===== -->
   <div class="right">
     <div class="tab-bar">
       <div class="tab on" id="tb0" onclick="sw(0)">Schedule</div>
       <div class="tab" id="tb1" onclick="sw(1)">News</div>
       <div class="tab" id="tb2" onclick="sw(2)">Quake</div>
     </div>
+
     <div class="panels" id="panels">
       <div class="panel on" id="p0">
         <div class="sect-lbl" id="schedLbl">本日の予定</div>
@@ -285,13 +309,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
       </div>
       <div class="panel" id="p2">
         <div class="sect-lbl">緊急地震速報</div>
-        <div id="quakeContent"><div class="no-alert"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg><div class="no-alert-txt">現在 警戒情報なし</div></div></div>
+        <div id="quakeContent">
+          <div class="no-alert">
+            <svg width="18" height="18" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg>
+            <div class="no-alert-txt">現在 警戒情報なし</div>
+          </div>
+        </div>
       </div>
       <div class="swipe-dots"><div class="sdot on" id="sd0"></div><div class="sdot" id="sd1"></div><div class="sdot" id="sd2"></div></div>
     </div>
+
     <div class="foot">
       <div class="st-dots"><div class="st-dot"></div><div class="st-dot"></div><div class="st-dot"></div></div>
-      <div class="settings-btn" onclick="openS()">
+      <div class="settings-btn-wrap" onclick="openS()" role="button" aria-label="設定">
         <svg viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -299,12 +329,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
       </div>
     </div>
 
+    <!-- ===== SETTINGS ===== -->
     <div class="overlay" id="overlay">
       <div class="ov-hdr">
         <div class="ov-title">Settings</div>
-        <div class="close-btn" onclick="closeS()"><svg viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        <div class="close-btn" onclick="closeS()" role="button" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="1.8" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </div>
       </div>
       <div class="ov-body">
+
         <div>
           <div class="s-sec-ttl">Display Size / 表示サイズ</div>
           <div class="s-row">
@@ -320,30 +356,52 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
             <input type="range" class="s-slider" id="slPanel" min="0.5" max="1.5" step="0.05" value="1.0">
           </div>
         </div>
+
         <div>
           <div class="s-sec-ttl">Calendar / 予定</div>
-          <div class="s-row"><div class="s-lbl">Google Calendar iCal URL</div><input class="s-in" id="cfgCalUrl" type="text" placeholder="https://calendar.google.com/calendar/ical/xxx/basic.ics"/><div class="s-hint">Google Calendar → 設定 → ICALボタン</div></div>
-          <div class="s-row"><div class="s-lbl">表示件数</div><input class="s-in" id="cfgCalCount" type="number" value="5" min="1" max="20" style="width:60px"/></div>
+          <div class="s-row">
+            <div class="s-lbl">Google Calendar iCal URL</div>
+            <input class="s-in" id="cfgCalUrl" type="text" placeholder="https://calendar.google.com/calendar/ical/xxx/basic.ics"/>
+            <div class="s-hint">Google Calendar → 設定 → ICALボタン</div>
+          </div>
+          <div class="s-row">
+            <div class="s-lbl">表示件数</div>
+            <input class="s-in" id="cfgCalCount" type="number" value="5" min="1" max="20" style="width:80px"/>
+          </div>
         </div>
+
         <div>
           <div class="s-sec-ttl">Weather / 天気</div>
           <div class="s-row"><div class="s-lbl">地点名</div><input class="s-in" id="cfgWxName" type="text" placeholder="Sapporo"/></div>
-          <div class="s-row"><div class="s-lbl">緯度</div><input class="s-in" id="cfgWxLat" type="text" placeholder="43.0618"/><div class="s-hint">札幌:43.0618 / 東京:35.6895 / 大阪:34.6937</div></div>
-          <div class="s-row"><div class="s-lbl">経度</div><input class="s-in" id="cfgWxLon" type="text" placeholder="141.3545"/><div class="s-hint">札幌:141.3545 / 東京:139.6917 / 大阪:135.5023</div></div>
+          <div class="s-row">
+            <div class="s-lbl">緯度</div>
+            <input class="s-in" id="cfgWxLat" type="text" placeholder="43.0618"/>
+            <div class="s-hint">札幌:43.0618 / 東京:35.6895 / 大阪:34.6937</div>
+          </div>
+          <div class="s-row">
+            <div class="s-lbl">経度</div>
+            <input class="s-in" id="cfgWxLon" type="text" placeholder="141.3545"/>
+            <div class="s-hint">札幌:141.3545 / 東京:139.6917 / 大阪:135.5023</div>
+          </div>
           <div class="s-row">
             <div class="s-lbl">気温単位</div>
-            <div style="display:flex;gap:10px;margin-top:4px">
-              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:1.3vh;color:rgba(255,255,255,0.65)"><input type="radio" name="cfgUnit" value="celsius" checked style="accent-color:#7dd3fc"> °C</label>
-              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:1.3vh;color:rgba(255,255,255,0.65)"><input type="radio" name="cfgUnit" value="fahrenheit" style="accent-color:#7dd3fc"> °F</label>
+            <div style="display:flex;gap:16px;margin-top:6px">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--ui-md);color:rgba(255,255,255,0.7)"><input type="radio" name="cfgUnit" value="celsius" checked style="accent-color:#7dd3fc;width:18px;height:18px"> °C</label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--ui-md);color:rgba(255,255,255,0.7)"><input type="radio" name="cfgUnit" value="fahrenheit" style="accent-color:#7dd3fc;width:18px;height:18px"> °F</label>
             </div>
           </div>
         </div>
+
         <div>
           <div class="s-sec-ttl">RSS フィード</div>
           <div class="rss-list" id="rssList"></div>
-          <button class="add-btn" onclick="addRss()"><svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round"><line x1="4.5" y1="1" x2="4.5" y2="8"/><line x1="1" y1="4.5" x2="8" y2="4.5"/></svg>フィードを追加</button>
-          <div class="s-hint" style="margin-top:0.6vh">allorigins.win プロキシ経由で取得します</div>
+          <button class="add-btn" onclick="addRss()">
+            <svg width="16" height="16" viewBox="0 0 9 9" fill="none" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round"><line x1="4.5" y1="1" x2="4.5" y2="8"/><line x1="1" y1="4.5" x2="8" y2="4.5"/></svg>
+            フィードを追加
+          </button>
+          <div class="s-hint" style="margin-top:0.8vh">allorigins.win プロキシ経由で取得します</div>
         </div>
+
         <button class="save-btn" onclick="saveS()">Save &amp; Apply</button>
       </div>
     </div>
@@ -351,69 +409,57 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
 </div></div>
 
 <script>
-// =====================================================
-// CONFIG
-// =====================================================
+// ===== CONFIG =====
 const DEFAULTS={calUrl:'',calCount:5,wxName:'Sapporo',wxLat:'43.0618',wxLon:'141.3545',wxUnit:'celsius',rssFeeds:['https://www3.nhk.or.jp/rss/news/cat0.xml'],clockSize:1.0,infoSize:1.0,panelSize:1.0};
 function loadCfg(){try{return Object.assign({},DEFAULTS,JSON.parse(localStorage.getItem('dashCfg')||'{}'));}catch(e){return{...DEFAULTS};}}
 function saveCfg(c){localStorage.setItem('dashCfg',JSON.stringify(c));}
 
-// =====================================================
-// CLOCK SIZING — 左カラムの実ピクセル幅から逆算
-// 構成: [cellH][dotSep][cellM][secCell]
-//   cellH幅  = fs × 1.58
-//   dotSep幅 = fs × 0.18
-//   cellM幅  = fs × 1.58
-//   secCell  = fs_sec×1.58 + padding_left(fs×0.12) + margin_left(fs×0.10)
-//            = fs_sec×1.58 + fs×0.22
-//   fs_sec   = fs × 0.38
-//   → secCell = fs×0.38×1.58 + fs×0.22 = fs×0.60 + fs×0.22 = fs×0.82
-//   合計     = fs×(1.58+0.18+1.58+0.82) = fs×4.16
-//   利用可能幅 = leftColWidth - paddingL - paddingR
-//   fs = availW / 4.16
-// =====================================================
-function calcAndApplyFontSize(){
+// ===== CLOCK SIZING =====
+// 構成比: cellH(1.58)+dot(0.18)+cellM(1.58)+sec幅合計(0.82) = 4.16
+// sec幅合計 = sec_font×1.58 + gap_left(clock×0.12) + margin_left(clock×0.10)
+//           = clock×0.38×1.58 + clock×0.22 = clock×0.60+0.22 = clock×0.82
+function calcClockSize(){
   const c=loadCfg();
   const scale=c.clockSize||1.0;
-  const leftCol=document.getElementById('leftCol');
-  const availW=leftCol.clientWidth*(1 - 0.03 - 0.02); // padding 3%+2%
-  const fs=Math.floor(availW/4.16*scale);
+  const lc=document.getElementById('leftCol');
+  const padL=lc.clientWidth*0.03;
+  const padR=lc.clientWidth*0.02;
+  const avail=lc.clientWidth-padL-padR;
+  const fs=Math.floor(avail/4.16*scale);
   const fsSec=Math.floor(fs*0.38);
-
-  // CSS変数に反映
   const r=document.documentElement;
-  r.style.setProperty('--fs-clock', fs+'px');
-  r.style.setProperty('--fs-sec',   fsSec+'px');
-  r.style.setProperty('--clock-size', scale);
-  r.style.setProperty('--info-size',  c.infoSize||1.0);
-  r.style.setProperty('--panel-size', c.panelSize||1.0);
-
-  // digit-cell / sec-cell の幅を明示設定
-  document.querySelectorAll('.digit-cell').forEach(el=>{
-    el.style.width=(fs*1.58)+'px';
-  });
+  r.style.setProperty('--fs-clock',fs+'px');
+  r.style.setProperty('--fs-sec',fsSec+'px');
+  r.style.setProperty('--clock-size',scale);
+  r.style.setProperty('--info-size',c.infoSize||1.0);
+  r.style.setProperty('--panel-size',c.panelSize||1.0);
+  // digit-cell 幅を inline で設定
+  document.querySelectorAll('.digit-cell').forEach(el=>{el.style.width=(fs*1.58)+'px';});
+  // dot-sep
+  const dot=document.getElementById('dotSep');
+  if(dot){
+    const dw=fs*0.18; const ds=fs*0.09;
+    dot.style.width=dw+'px'; dot.style.gap=dw+'px';
+    dot.style.marginBottom=(fs*0.14)+'px';
+    dot.querySelectorAll('span').forEach(s=>{s.style.width=ds+'px';s.style.height=ds+'px';});
+  }
+  // sec-cell: padding・margin・width を設定
   const sc=document.getElementById('secCell');
   if(sc){
     sc.style.paddingLeft=(fs*0.12)+'px';
     sc.style.marginLeft=(fs*0.10)+'px';
-    sc.style.marginBottom=(fs*0.08)+'px';
+    // align-self は使わず、clock-rowのalign-items:centerに任せる
+    sc.style.alignSelf='';
+    sc.style.marginBottom='';
   }
-  const dot=document.getElementById('dotSep');
-  if(dot){
-    dot.style.width=(fs*0.18)+'px';
-    dot.style.gap=(fs*0.18)+'px';
-    dot.style.marginBottom=(fs*0.14)+'px';
-    dot.querySelectorAll('span').forEach(s=>{
-      s.style.width=(fs*0.09)+'px';
-      s.style.height=(fs*0.09)+'px';
-    });
-  }
+  const sd=document.getElementById('dS');
+  if(sd) sd.style.width=(fsSec*1.58)+'px';
+  const slbl=document.querySelector('.sec-lbl');
+  if(slbl) slbl.style.width=(fsSec*1.58)+'px';
 }
-window.addEventListener('resize',calcAndApplyFontSize);
+window.addEventListener('resize',calcClockSize);
 
-// =====================================================
-// CLOCK TICK
-// =====================================================
+// ===== CLOCK TICK =====
 const p2=s=>String(s).padStart(2,'0');
 const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 function tick(){
@@ -426,9 +472,7 @@ function tick(){
 }
 tick();setInterval(tick,1000);
 
-// =====================================================
-// TABS & SWIPE
-// =====================================================
+// ===== TABS =====
 let cur=0;
 function sw(i){[0,1,2].forEach(j=>{document.getElementById('tb'+j).classList.toggle('on',j===i);document.getElementById('p'+j).classList.toggle('on',j===i);document.getElementById('sd'+j).classList.toggle('on',j===i);});cur=i;}
 const pnl=document.getElementById('panels');
@@ -437,16 +481,13 @@ pnl.addEventListener('touchstart',e=>{sy=e.touches[0].clientY;},{passive:true});
 pnl.addEventListener('touchend',e=>{const d=sy-e.changedTouches[0].clientY;if(Math.abs(d)>18){if(d>0&&cur<2)sw(cur+1);if(d<0&&cur>0)sw(cur-1);}});
 pnl.addEventListener('wheel',e=>{if(e.deltaY>10&&cur<2)sw(cur+1);if(e.deltaY<-10&&cur>0)sw(cur-1);},{passive:true});
 
-// =====================================================
-// SETTINGS
-// =====================================================
+// ===== SETTINGS =====
 function openS(){
   const c=loadCfg();
   [['Clock','clockSize'],['Info','infoSize'],['Panel','panelSize']].forEach(([k,key])=>{
     const sl=document.getElementById('sl'+k);
     const lb=document.getElementById('lbl'+k);
-    sl.value=c[key]||1.0;
-    lb.textContent=parseFloat(c[key]||1.0).toFixed(2);
+    sl.value=c[key]||1.0; lb.textContent=parseFloat(c[key]||1.0).toFixed(2);
     sl.oninput=()=>{lb.textContent=parseFloat(sl.value).toFixed(2);livePreview();};
   });
   document.getElementById('cfgCalUrl').value=c.calUrl||'';
@@ -463,14 +504,17 @@ function livePreview(){
   tmp.clockSize=parseFloat(document.getElementById('slClock').value);
   tmp.infoSize=parseFloat(document.getElementById('slInfo').value);
   tmp.panelSize=parseFloat(document.getElementById('slPanel').value);
-  saveCfg(tmp);calcAndApplyFontSize();
+  saveCfg(tmp); calcClockSize();
 }
 function closeS(){document.getElementById('overlay').classList.remove('open');}
 function renderRssList(feeds){
   const el=document.getElementById('rssList');el.innerHTML='';
   feeds.forEach((url,i)=>{
     const row=document.createElement('div');row.className='rss-item';
-    row.innerHTML=`<input class="s-in" type="text" value="${url}" style="flex:1" data-rss-idx="${i}"/><div class="rss-del" onclick="delRss(${i})" style="width:2vh;height:2vh;flex-shrink:0;cursor:pointer;opacity:0.45"><svg viewBox="0 0 16 16" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg></div>`;
+    row.innerHTML=`<input class="s-in" type="text" value="${url}" style="flex:1" data-rss-idx="${i}"/>
+      <div class="rss-del" onclick="delRss(${i})" role="button">
+        <svg viewBox="0 0 16 16" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
+      </div>`;
     el.appendChild(row);
   });
 }
@@ -490,33 +534,40 @@ function saveS(){
     infoSize:parseFloat(document.getElementById('slInfo').value),
     panelSize:parseFloat(document.getElementById('slPanel').value),
   };
-  saveCfg(c);calcAndApplyFontSize();closeS();initAll();
+  saveCfg(c); calcClockSize(); closeS(); initAll();
 }
 
-// =====================================================
-// WEATHER
-// =====================================================
+// ===== WEATHER =====
 const WX_CODES={0:'快晴',1:'晴れ',2:'一部曇り',3:'曇り',45:'霧',48:'霧氷',51:'小雨',53:'雨',55:'強雨',61:'小雨',63:'雨',65:'大雨',71:'小雪',73:'雪',75:'大雪',80:'にわか雨',81:'雨',82:'大雨',95:'雷雨',99:'激しい雷雨'};
+// 天気コードに応じたSVGアイコンを返す
+function wxIconSvg(code){
+  if(code===0||code===1) return `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" fill="#7dd3fc" opacity="0.8"/><g stroke="#7dd3fc" stroke-width="1.3" stroke-linecap="round" opacity="0.5"><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.4" y1="4.4" x2="6.2" y2="6.2"/><line x1="17.8" y1="17.8" x2="19.6" y2="19.6"/><line x1="19.6" y1="4.4" x2="17.8" y2="6.2"/><line x1="6.2" y1="17.8" x2="4.4" y2="19.6"/></g></svg>`;
+  if(code===2||code===3) return `<svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="11" r="4" fill="rgba(125,211,252,0.3)"/><ellipse cx="15" cy="13" rx="5" ry="4" fill="rgba(125,211,252,0.5)"/><ellipse cx="9" cy="14" rx="5" ry="3.5" fill="rgba(125,211,252,0.45)"/></svg>`;
+  if(code>=51&&code<=67||code>=80&&code<=82) return `<svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="9" rx="6" ry="4" fill="rgba(125,211,252,0.4)"/><g stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round" opacity="0.8"><line x1="8" y1="15" x2="7" y2="19"/><line x1="12" y1="15" x2="11" y2="19"/><line x1="16" y1="15" x2="15" y2="19"/></g></svg>`;
+  if(code>=71&&code<=77) return `<svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="9" rx="6" ry="4" fill="rgba(125,211,252,0.4)"/><g fill="#7dd3fc" opacity="0.8"><circle cx="8" cy="16" r="1.2"/><circle cx="12" cy="16" r="1.2"/><circle cx="16" cy="16" r="1.2"/><circle cx="10" cy="19" r="1.2"/><circle cx="14" cy="19" r="1.2"/></g></svg>`;
+  if(code>=95) return `<svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="8" rx="7" ry="4.5" fill="rgba(125,211,252,0.35)"/><polyline points="13,12 10,16 13,16 10,21" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" fill="#7dd3fc" opacity="0.75"/></svg>`;
+}
 async function fetchWeather(){
   const c=loadCfg();
   if(!c.wxLat||!c.wxLon){document.getElementById('wxDesc').textContent='緯度経度を設定';return;}
-  const unit=c.wxUnit||'celsius';const us=unit==='fahrenheit'?'°F':'°C';
+  const unit=c.wxUnit||'celsius'; const us=unit==='fahrenheit'?'°F':'°C';
   try{
     const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.wxLat}&longitude=${c.wxLon}&current=temperature_2m,weathercode&temperature_unit=${unit}&timezone=auto`);
     const d=await r.json();
+    const code=d.current.weathercode;
     document.getElementById('wxTemp').textContent=Math.round(d.current.temperature_2m)+us;
-    document.getElementById('wxDesc').textContent=WX_CODES[d.current.weathercode]||'コード:'+d.current.weathercode;
+    document.getElementById('wxDesc').textContent=WX_CODES[code]||'コード:'+code;
     document.getElementById('wxLoc').textContent=c.wxName||'---';
     document.getElementById('clockLabel').textContent=c.wxName?`Local Time — ${c.wxName}`:'Local Time';
+    document.getElementById('wxIcon').innerHTML=wxIconSvg(code);
   }catch(e){document.getElementById('wxDesc').textContent='取得失敗';}
 }
 
-// =====================================================
-// RSS
-// =====================================================
+// ===== RSS =====
 function timeAgo(ds){const m=(Date.now()-new Date(ds))/60000;if(m<60)return Math.floor(m)+' min ago';if(m<1440)return Math.floor(m/60)+' hr ago';return Math.floor(m/1440)+' days ago';}
 async function fetchRss(){
-  const c=loadCfg();const feeds=c.rssFeeds||[];const el=document.getElementById('newsList');
+  const c=loadCfg(); const feeds=c.rssFeeds||[]; const el=document.getElementById('newsList');
   if(!feeds.length){el.innerHTML='<div class="news-loading">RSSフィードを設定してください</div>';return;}
   el.innerHTML='<div class="news-loading">読み込み中...</div>';
   const items=[];
@@ -536,29 +587,25 @@ async function fetchRss(){
   el.innerHTML=items.slice(0,8).map(i=>`<div class="news-card"><div class="news-src">${i.src}</div><div class="news-ttl">${i.title}</div><div class="news-ago">${i.pub?timeAgo(i.pub):''}</div></div>`).join('');
 }
 
-// =====================================================
-// QUAKE
-// =====================================================
+// ===== QUAKE =====
 async function fetchQuake(){
   const el=document.getElementById('quakeContent');
   try{
     const r=await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=1');
     const d=await r.json();
     if(!d.length){renderNoAlert(el);return;}
-    const q=d[0];const info=q.earthquake||{};const hypo=info.hypocenter||{};
-    const intStr=info.maxScale!==undefined?{10:'1',20:'2',30:'3',40:'4',45:'5弱',50:'5強',55:'6弱',60:'6強',70:'7'}[info.maxScale]||info.maxScale:'---';
+    const q=d[0]; const info=q.earthquake||{}; const hypo=info.hypocenter||{};
+    const intStr={10:'1',20:'2',30:'3',40:'4',45:'5弱',50:'5強',55:'6弱',60:'6強',70:'7'}[info.maxScale]||'---';
     const mag=hypo.magnitude!==undefined?hypo.magnitude.toFixed(1):'--';
     const t=q.time?new Date(q.time).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})+' JST':'';
-    el.innerHTML=`<div class="quake-box"><div class="quake-hdr"><div class="quake-badge">最新${t?' — '+t:''}</div><div class="quake-int">震度 ${intStr}</div></div><div class="quake-body">発生地域：<span style="color:rgba(255,255,255,0.9)">${hypo.name||'---'}</span>　深さ：${hypo.depth!==undefined?hypo.depth+'km':'--'}　<span class="quake-mag">M ${mag}</span></div></div><div class="no-alert" style="margin-top:1vh"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg><div class="no-alert-txt">現在 警戒情報なし</div></div>`;
+    el.innerHTML=`<div class="quake-box"><div class="quake-hdr"><div class="quake-badge">最新${t?' — '+t:''}</div><div class="quake-int">震度 ${intStr}</div></div><div class="quake-body">発生地域：<span style="color:rgba(255,255,255,0.92)">${hypo.name||'---'}</span>　深さ：${hypo.depth!==undefined?hypo.depth+'km':'--'}　<span class="quake-mag">M ${mag}</span></div></div><div class="no-alert" style="margin-top:1.5vh"><svg width="18" height="18" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg><div class="no-alert-txt">現在 警戒情報なし</div></div>`;
   }catch(e){renderNoAlert(el);}
 }
-function renderNoAlert(el){el.innerHTML=`<div class="no-alert"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg><div class="no-alert-txt">現在 警戒情報なし</div></div>`;}
+function renderNoAlert(el){el.innerHTML=`<div class="no-alert"><svg width="18" height="18" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg><div class="no-alert-txt">現在 警戒情報なし</div></div>`;}
 
-// =====================================================
-// CALENDAR
-// =====================================================
+// ===== CALENDAR =====
 async function fetchCalendar(){
-  const c=loadCfg();const el=document.getElementById('schedList');
+  const c=loadCfg(); const el=document.getElementById('schedList');
   const today=new Date();
   document.getElementById('schedLbl').textContent='本日の予定 — '+today.getFullYear()+'.'+p2(today.getMonth()+1)+'.'+p2(today.getDate());
   if(!c.calUrl){el.innerHTML='<div class="no-events">カレンダーURLを設定してください</div>';return;}
@@ -570,7 +617,7 @@ async function fetchCalendar(){
     const events=[];
     d.contents.split('BEGIN:VEVENT').slice(1).forEach(block=>{
       const get=key=>{const m=block.match(new RegExp(key+'[^:]*:([^\\r\\n]*)'));return m?m[1].trim():'';};
-      const dtstart=get('DTSTART');if(!dtstart.startsWith(todayStr))return;
+      const dtstart=get('DTSTART'); if(!dtstart.startsWith(todayStr))return;
       events.push({time:dtstart.length>=15?dtstart.slice(9,11)+':'+dtstart.slice(11,13):'終日',title:get('SUMMARY')||'（タイトルなし）',loc:get('LOCATION')||'',sort:dtstart});
     });
     events.sort((a,b)=>a.sort.localeCompare(b.sort));
@@ -580,22 +627,19 @@ async function fetchCalendar(){
   }catch(e){el.innerHTML='<div class="no-events">カレンダーの取得に失敗しました</div>';}
 }
 
-// =====================================================
-// INIT
-// =====================================================
+// ===== INIT =====
 function initAll(){
   const c=loadCfg();
   document.getElementById('wxLoc').textContent=c.wxName||'--';
   document.getElementById('clockLabel').textContent=c.wxName?`Local Time — ${c.wxName}`:'Local Time';
-  // フォントロード後にサイズ計算
-  if(document.fonts){
-    document.fonts.ready.then(()=>{calcAndApplyFontSize();});
-  } else {
-    setTimeout(calcAndApplyFontSize,300);
-  }
-  fetchWeather();fetchRss();fetchQuake();fetchCalendar();
+  fetchWeather(); fetchRss(); fetchQuake(); fetchCalendar();
 }
-initAll();
+// フォントロード後にサイズ計算
+if(document.fonts){
+  document.fonts.ready.then(()=>{calcClockSize(); initAll();});
+} else {
+  setTimeout(()=>{calcClockSize(); initAll();},400);
+}
 setInterval(fetchWeather,10*60*1000);
 setInterval(fetchRss,5*60*1000);
 setInterval(fetchQuake,60*1000);
