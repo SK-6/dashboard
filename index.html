@@ -54,42 +54,58 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
   letter-spacing:0.28em;color:rgba(125,211,252,0.75);
   text-transform:uppercase;font-weight:400;margin-bottom:0.8vh;
 }
-.clock-row{display:flex;align-items:center;width:100%}
+/*
+ * CLOCK LAYOUT — 2段構造
+ *
+ * clock-wrap が左カラム幅に収まる固定幅を持ち、margin:auto で中央揃え。
+ * 内部は「数字行 .clock-digits」と「ラベル行 .clock-labels」の2行。
+ * それぞれ同じ flex 幅配分にすることで列が揃い、
+ * ラベルは必ず同じ縦位置（数字行のすぐ下）に並ぶ。
+ */
+.clock-section{display:flex;flex-direction:column;width:100%;align-items:center}
 
-/* 時・分セル — JSが幅を実測設定 */
-.digit-cell{flex:0 0 auto;display:flex;flex-direction:column;align-items:center}
+/* 時計全体を包むラッパー — JSが幅を設定、margin:autoで中央配置 */
+.clock-wrap{display:flex;flex-direction:column;align-items:stretch}
+
+/* 数字行 */
+.clock-digits{display:flex;align-items:flex-end;/* 数字の下端を基準に揃える */}
+
+/* ラベル行 — 数字行と同じ幅配分で並べる */
+.clock-labels{display:flex;align-items:flex-start;margin-top:0.5vh}
+
+/* 時・分の数字セル */
+.digit-cell{flex:0 0 auto;display:flex;align-items:center;justify-content:center}
 .digit{font-family:'Orbitron',monospace;font-weight:900;font-size:var(--fs-clock,80px);color:#7dd3fc;line-height:1;letter-spacing:0;display:block;text-align:center;width:100%}
-.digit-lbl{
-  font-size:calc(var(--fs-clock,80px) * 0.13);
-  letter-spacing:0.24em;color:rgba(125,211,252,0.6);
-  text-transform:uppercase;text-align:center;margin-top:0.5vh;font-weight:300;width:100%;
-}
 
-/* ドット区切り */
-.dot-sep{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:calc(var(--fs-clock,80px)*0.14)}
+/* ドット区切り（数字行内） — 左右セルの中間に自然に収まる */
+.dot-sep{
+  flex:0 0 auto;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  /* 数字のcap高さ(≒0.72em)の中央にドットを置く。
+     数字行はalign-items:flex-endなので、
+     高さをfs-clockに合わせ、内部でjustify-content:centerにする */
+  height:var(--fs-clock,80px);
+}
 .dot-sep span{display:block;border-radius:50%;background:#7dd3fc;opacity:0.6;flex-shrink:0;animation:blink 1s step-end infinite}
 @keyframes blink{50%{opacity:0.1}}
 
-/* 秒セル
-   align-self を使わず digit-cell と同じ flex コンテキストに置く。
-   SEC ラベルを digit-lbl と同じ margin-top にすることで縦位置が揃う。 */
-.sec-cell{
-  flex:0 0 auto;
-  display:flex;flex-direction:column;align-items:center;
-  border-left:1px solid rgba(125,211,252,0.18);
-}
-.sec-digit{
-  font-family:'Orbitron',monospace;font-weight:900;
-  font-size:var(--fs-sec,32px);
-  color:rgba(125,211,252,0.45);line-height:1;letter-spacing:0;
-  display:block;text-align:center;
-}
-.sec-lbl{
-  /* digit-lbl と完全に同じプロパティで揃える */
+/* 秒の数字セル */
+.sec-cell{flex:0 0 auto;display:flex;align-items:flex-end;justify-content:center;border-left:1px solid rgba(125,211,252,0.18)}
+.sec-digit{font-family:'Orbitron',monospace;font-weight:900;font-size:var(--fs-sec,32px);color:rgba(125,211,252,0.45);line-height:1;letter-spacing:0;display:block;text-align:center}
+
+/* ラベルセル — 共通スタイル */
+.lbl-cell{flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.digit-lbl,.sec-lbl{
   font-size:calc(var(--fs-clock,80px) * 0.13);
-  letter-spacing:0.24em;color:rgba(125,211,252,0.45);
-  text-transform:uppercase;text-align:center;margin-top:0.5vh;font-weight:300;
+  letter-spacing:0.24em;color:rgba(125,211,252,0.6);
+  text-transform:uppercase;text-align:center;font-weight:300;white-space:nowrap;
 }
+.sec-lbl{color:rgba(125,211,252,0.45)}
+/* ドット列のラベルセルは幅だけ確保して中身なし */
+.dot-lbl{flex:0 0 auto}
+/* 秒ラベルセルは左ボーダー */
+.sec-lbl-cell{flex:0 0 auto;display:flex;align-items:center;justify-content:center;border-left:1px solid rgba(125,211,252,0.18)}
 
 /* ===== DATE / WEATHER ===== */
 .meta-row{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
@@ -248,19 +264,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
   <div class="left" id="leftCol">
     <div class="clock-section">
       <div class="clock-label" id="clockLabel">Local Time</div>
-      <div class="clock-row" id="clockRow">
-        <div class="digit-cell" id="cellH">
-          <span class="digit" id="dH">00</span>
-          <div class="digit-lbl">Hour</div>
+      <!-- clock-wrap の幅は JS が設定 → margin:auto で中央配置 -->
+      <div class="clock-wrap" id="clockWrap">
+        <!-- 数字行 -->
+        <div class="clock-digits" id="clockDigits">
+          <div class="digit-cell" id="cellH"><span class="digit" id="dH">00</span></div>
+          <div class="dot-sep" id="dotSep"><span></span><span></span></div>
+          <div class="digit-cell" id="cellM"><span class="digit" id="dM">00</span></div>
+          <div class="sec-cell" id="secCell"><span class="sec-digit" id="dS">00</span></div>
         </div>
-        <div class="dot-sep" id="dotSep"><span></span><span></span></div>
-        <div class="digit-cell" id="cellM">
-          <span class="digit" id="dM">00</span>
-          <div class="digit-lbl">Min</div>
-        </div>
-        <div class="sec-cell" id="secCell">
-          <span class="sec-digit" id="dS">00</span>
-          <div class="sec-lbl">Sec</div>
+        <!-- ラベル行：数字行と完全に同じ幅配分 -->
+        <div class="clock-labels" id="clockLabels">
+          <div class="lbl-cell" id="lblCellH"><span class="digit-lbl">Hour</span></div>
+          <div class="dot-lbl" id="lblDot"></div>
+          <div class="lbl-cell" id="lblCellM"><span class="digit-lbl">Min</span></div>
+          <div class="sec-lbl-cell" id="lblCellS"><span class="sec-lbl">Sec</span></div>
         </div>
       </div>
     </div>
@@ -410,14 +428,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
 
 <script>
 // ===== CONFIG =====
-const DEFAULTS={calUrl:'',calCount:5,wxName:'Sapporo',wxLat:'43.0618',wxLon:'141.3545',wxUnit:'celsius',rssFeeds:['https://www3.nhk.or.jp/rss/news/cat0.xml'],clockSize:1.0,infoSize:1.0,panelSize:1.0};
+const DEFAULTS={calUrl:'',calCount:5,wxName:'Sapporo',wxLat:'43.0618',wxLon:'141.3545',wxUnit:'celsius',
+  // NHK RSS: allorigins経由でも取得可能な形式
+  rssFeeds:['https://feeds.feedburner.com/nhkworld/news'],
+  clockSize:1.0,infoSize:1.0,panelSize:1.0};
 function loadCfg(){try{return Object.assign({},DEFAULTS,JSON.parse(localStorage.getItem('dashCfg')||'{}'));}catch(e){return{...DEFAULTS};}}
 function saveCfg(c){localStorage.setItem('dashCfg',JSON.stringify(c));}
 
 // ===== CLOCK SIZING =====
-// 構成比: cellH(1.58)+dot(0.18)+cellM(1.58)+sec幅合計(0.82) = 4.16
-// sec幅合計 = sec_font×1.58 + gap_left(clock×0.12) + margin_left(clock×0.10)
-//           = clock×0.38×1.58 + clock×0.22 = clock×0.60+0.22 = clock×0.82
+// 構成: cellH(fs×1.58) + dot(fs×0.18) + cellM(fs×1.58) + secCell(fsSec×1.58 + padL fs×0.12 + marginL fs×0.10)
+// fsSec = fs×0.38
+// secCell幅 = fs×0.38×1.58 + fs×0.22 = fs×(0.60+0.22) = fs×0.82
+// 合計 = fs×(1.58+0.18+1.58+0.82) = fs×4.16
 function calcClockSize(){
   const c=loadCfg();
   const scale=c.clockSize||1.0;
@@ -427,35 +449,63 @@ function calcClockSize(){
   const avail=lc.clientWidth-padL-padR;
   const fs=Math.floor(avail/4.16*scale);
   const fsSec=Math.floor(fs*0.38);
+  const dotW=Math.round(fs*0.18);
+  const dotS=Math.round(fs*0.09);
+  const dotG=Math.round(fs*0.18);
+  const secPadL=Math.round(fs*0.12);
+  const secMarL=Math.round(fs*0.10);
+
+  // 各セルの幅
+  const wDigit=Math.round(fs*1.58);
+  const wSec=Math.round(fsSec*1.58);
+
+  // clock-wrap の合計幅を設定 → margin:auto で左カラム中央に配置
+  const totalW=wDigit+dotW+wDigit+secPadL+secMarL+wSec;
+  const wrap=document.getElementById('clockWrap');
+  if(wrap){wrap.style.width=totalW+'px';wrap.style.marginLeft='auto';wrap.style.marginRight='auto';}
+
+  // CSS変数
   const r=document.documentElement;
   r.style.setProperty('--fs-clock',fs+'px');
   r.style.setProperty('--fs-sec',fsSec+'px');
   r.style.setProperty('--clock-size',scale);
   r.style.setProperty('--info-size',c.infoSize||1.0);
   r.style.setProperty('--panel-size',c.panelSize||1.0);
-  // digit-cell 幅を inline で設定
-  document.querySelectorAll('.digit-cell').forEach(el=>{el.style.width=(fs*1.58)+'px';});
-  // dot-sep
+
+  // 数字行：digit-cell幅
+  document.querySelectorAll('.digit-cell').forEach(el=>el.style.width=wDigit+'px');
+
+  // ドット
   const dot=document.getElementById('dotSep');
   if(dot){
-    const dw=fs*0.18; const ds=fs*0.09;
-    dot.style.width=dw+'px'; dot.style.gap=dw+'px';
-    dot.style.marginBottom=(fs*0.14)+'px';
-    dot.querySelectorAll('span').forEach(s=>{s.style.width=ds+'px';s.style.height=ds+'px';});
+    dot.style.width=dotW+'px';
+    dot.style.gap=dotG+'px';
+    dot.querySelectorAll('span').forEach(s=>{s.style.width=dotS+'px';s.style.height=dotS+'px';});
   }
-  // sec-cell: padding・margin・width を設定
+
+  // 秒セル
   const sc=document.getElementById('secCell');
   if(sc){
-    sc.style.paddingLeft=(fs*0.12)+'px';
-    sc.style.marginLeft=(fs*0.10)+'px';
-    // align-self は使わず、clock-rowのalign-items:centerに任せる
-    sc.style.alignSelf='';
-    sc.style.marginBottom='';
+    sc.style.paddingLeft=secPadL+'px';
+    sc.style.marginLeft=secMarL+'px';
+    sc.style.width=wSec+'px';
   }
   const sd=document.getElementById('dS');
-  if(sd) sd.style.width=(fsSec*1.58)+'px';
-  const slbl=document.querySelector('.sec-lbl');
-  if(slbl) slbl.style.width=(fsSec*1.58)+'px';
+  if(sd){sd.style.width=wSec+'px';}
+
+  // ラベル行：数字行と完全に同じ幅配分
+  const lH=document.getElementById('lblCellH');
+  const lD=document.getElementById('lblDot');
+  const lM=document.getElementById('lblCellM');
+  const lS=document.getElementById('lblCellS');
+  if(lH) lH.style.width=wDigit+'px';
+  if(lD) lD.style.width=dotW+'px';
+  if(lM) lM.style.width=wDigit+'px';
+  if(lS){
+    lS.style.paddingLeft=secPadL+'px';
+    lS.style.marginLeft=secMarL+'px';
+    lS.style.width=wSec+'px';
+  }
 }
 window.addEventListener('resize',calcClockSize);
 
@@ -565,6 +615,24 @@ async function fetchWeather(){
 }
 
 // ===== RSS =====
+// CORS回避プロキシを複数用意してフォールバック
+const RSS_PROXIES=[
+  url=>`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+  url=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
+];
+async function fetchViaProxy(url){
+  for(const makeProxy of RSS_PROXIES){
+    try{
+      const res=await fetch(makeProxy(url),{signal:AbortSignal.timeout(6000)});
+      if(!res.ok) continue;
+      const d=await res.json().catch(async()=>({contents:await res.text()}));
+      const text=d.contents||d;
+      if(typeof text==='string'&&text.length>100) return text;
+    }catch(e){/* 次のプロキシへ */}
+  }
+  return null;
+}
 function timeAgo(ds){const m=(Date.now()-new Date(ds))/60000;if(m<60)return Math.floor(m)+' min ago';if(m<1440)return Math.floor(m/60)+' hr ago';return Math.floor(m/1440)+' days ago';}
 async function fetchRss(){
   const c=loadCfg(); const feeds=c.rssFeeds||[]; const el=document.getElementById('newsList');
@@ -573,17 +641,17 @@ async function fetchRss(){
   const items=[];
   for(const url of feeds){
     try{
-      const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-      const d=await r.json();
-      const xml=new DOMParser().parseFromString(d.contents,'text/xml');
+      const text=await fetchViaProxy(url);
+      if(!text){console.warn('RSS取得失敗:',url);continue;}
+      const xml=new DOMParser().parseFromString(text,'text/xml');
       const src=(xml.querySelector('channel > title, feed > title')?.textContent||url).trim().substring(0,20);
       xml.querySelectorAll('item, entry').forEach(item=>{
         items.push({title:item.querySelector('title')?.textContent?.trim()||'',pub:item.querySelector('pubDate,published,updated')?.textContent||'',src});
       });
-    }catch(e){}
+    }catch(e){console.warn('RSS parse error:',e);}
   }
   items.sort((a,b)=>new Date(b.pub)-new Date(a.pub));
-  if(!items.length){el.innerHTML='<div class="news-loading">記事を取得できませんでした</div>';return;}
+  if(!items.length){el.innerHTML='<div class="news-loading">記事を取得できませんでした<br><span style="font-size:0.85em;opacity:0.6">設定でRSS URLを確認してください</span></div>';return;}
   el.innerHTML=items.slice(0,8).map(i=>`<div class="news-card"><div class="news-src">${i.src}</div><div class="news-ttl">${i.title}</div><div class="news-ago">${i.pub?timeAgo(i.pub):''}</div></div>`).join('');
 }
 
