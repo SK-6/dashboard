@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#04060d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dashboard">
+<title>Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@300;400;500&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#04060d}
+body{display:flex;align-items:center;justify-content:center}
+
+:root{
+  --clock-size: 1.0;
+  --info-size:  1.0;
+  --panel-size: 1.0;
+}
+
+.root{width:100vw;height:100vh;background:#04060d;overflow:hidden;font-family:'Inter','Noto Sans JP',sans-serif}
+.screen{width:100%;height:100%;display:flex;position:relative;overflow:hidden}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(125,211,252,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(125,211,252,0.03) 1px,transparent 1px);background-size:20px 20px;pointer-events:none;z-index:0}
+.corner{position:absolute;width:10px;height:10px;z-index:3}
+.c-tl{top:6px;left:6px;border-top:1px solid rgba(125,211,252,0.45);border-left:1px solid rgba(125,211,252,0.45)}
+.c-tr{top:6px;right:6px;border-top:1px solid rgba(125,211,252,0.45);border-right:1px solid rgba(125,211,252,0.45)}
+.c-bl{bottom:6px;left:6px;border-bottom:1px solid rgba(125,211,252,0.45);border-left:1px solid rgba(125,211,252,0.45)}
+.c-br{bottom:6px;right:6px;border-bottom:1px solid rgba(125,211,252,0.45);border-right:1px solid rgba(125,211,252,0.45)}
+
+.left{width:52%;display:flex;flex-direction:column;justify-content:center;align-items:stretch;position:relative;z-index:1;border-right:1px solid rgba(125,211,252,0.12);padding:3% 3% 3% 4%;gap:clamp(6px,1.4vw,14px)}
+.right{width:48%;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ==============================
+   CLOCK — ガタつき防止設計
+   各桁を "固定幅ボックス" に封じ込める。
+   Orbitron は等幅フォントなので
+   2文字 = font-size * 1.15 程度あれば必ず収まる。
+   overflow:hidden でそれ以上は切る。
+============================== */
+.clock-section{display:flex;flex-direction:column;align-items:flex-start;width:100%}
+.clock-label{
+  font-size:calc(clamp(6px,0.85vw,8px) * var(--info-size));
+  letter-spacing:0.32em;color:rgba(125,211,252,0.55);text-transform:uppercase;font-weight:400;
+  margin-bottom:clamp(2px,0.5vw,5px);
+}
+.clock-row{display:flex;align-items:flex-end;width:100%}
+
+/* 時・分 共通の固定幅セル */
+.digit-cell{
+  /* 幅 = font-size × 2文字 × letter-spacing補正。
+     scale変数に追従させて比例拡縮する。       */
+  flex:0 0 auto;
+  width:calc(clamp(40px,13.5vw,140px) * var(--clock-size) * 1.15);
+  display:flex;flex-direction:column;align-items:center;
+  overflow:hidden; /* はみ出しを一切許さない */
+}
+.digit{
+  font-family:'Orbitron',monospace;font-weight:900;
+  font-size:calc(clamp(40px,13.5vw,140px) * var(--clock-size));
+  color:#7dd3fc;line-height:0.88;letter-spacing:-0.06em;
+  width:100%;text-align:center;display:block;
+}
+.digit-lbl{
+  font-size:calc(clamp(6px,0.8vw,7px) * var(--clock-size));
+  letter-spacing:0.28em;color:rgba(125,211,252,0.5);text-transform:uppercase;
+  text-align:center;margin-top:4px;font-weight:300;width:100%;
+}
+
+/* 区切りドット — 幅は "数字1文字の約15%" に固定 */
+.dot-sep{
+  flex:0 0 auto;
+  width:calc(clamp(5px,1vw,10px) * var(--clock-size));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:calc(clamp(3px,0.9vw,9px) * var(--clock-size));
+  padding-bottom:calc(clamp(6px,1.8vw,16px) * var(--clock-size));
+}
+.dot-sep span{
+  display:block;
+  width:calc(clamp(2.5px,0.5vw,5px) * var(--clock-size));
+  height:calc(clamp(2.5px,0.5vw,5px) * var(--clock-size));
+  border-radius:50%;background:#7dd3fc;opacity:0.55;
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink{50%{opacity:0.1}}
+
+/* 秒 — 固定幅セル（小） */
+.sec-cell{
+  flex:0 0 auto;
+  width:calc(clamp(14px,4.2vw,42px) * var(--clock-size) * 1.2);
+  display:flex;flex-direction:column;align-items:center;
+  border-left:1px solid rgba(125,211,252,0.15);
+  padding-left:calc(clamp(5px,1.1vw,11px) * var(--clock-size));
+  margin-left:calc(clamp(4px,0.9vw,9px) * var(--clock-size));
+  overflow:hidden;
+}
+.sec-digit{
+  font-family:'Orbitron',monospace;font-weight:900;
+  font-size:calc(clamp(14px,4.2vw,42px) * var(--clock-size));
+  color:rgba(125,211,252,0.4);line-height:1;letter-spacing:-0.03em;
+  text-align:center;width:100%;display:block;
+}
+.sec-lbl{
+  font-size:calc(clamp(5px,0.72vw,6.5px) * var(--clock-size));
+  letter-spacing:0.24em;color:rgba(125,211,252,0.38);text-transform:uppercase;
+  text-align:center;margin-top:3px;font-weight:300;width:100%;
+}
+
+/* DATE / WEATHER */
+.meta-row{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
+.date-main{font-size:calc(clamp(11px,2.1vw,18px) * var(--info-size));font-weight:500;color:rgba(255,255,255,0.88);letter-spacing:0.07em}
+.date-sub{font-size:calc(clamp(9px,1.5vw,13px) * var(--info-size));font-weight:300;color:rgba(255,255,255,0.55);letter-spacing:0.18em;margin-top:2px;text-transform:uppercase}
+.divider-v{width:1px;height:clamp(22px,4vw,38px);background:rgba(125,211,252,0.15);flex-shrink:0}
+.weather-block{display:flex;align-items:center;gap:clamp(5px,0.9vw,9px);flex-shrink:0}
+.wx-icon{flex-shrink:0;width:calc(clamp(16px,3vw,26px)*var(--info-size));height:calc(clamp(16px,3vw,26px)*var(--info-size))}
+.wx-temp{font-family:'Orbitron',monospace;font-size:calc(clamp(13px,2.4vw,21px)*var(--info-size));font-weight:900;color:rgba(255,255,255,0.92);letter-spacing:0.02em}
+.wx-right{display:flex;flex-direction:column;gap:2px}
+.wx-loc{font-size:calc(clamp(8px,1.2vw,10px)*var(--info-size));letter-spacing:0.16em;color:rgba(125,211,252,0.75);text-transform:uppercase;font-weight:500}
+.wx-desc{font-size:calc(clamp(7px,1.05vw,9px)*var(--info-size));color:rgba(255,255,255,0.52);letter-spacing:0.05em}
+
+/* RIGHT PANEL */
+.tab-bar{display:flex;border-bottom:1px solid rgba(125,211,252,0.12);flex-shrink:0;height:clamp(20px,3.8vw,30px)}
+.tab{flex:1;display:flex;align-items:center;justify-content:center;font-size:calc(clamp(7px,1.1vw,9px)*var(--panel-size));letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.38);cursor:pointer;border-bottom:1.5px solid transparent;transition:all 0.2s;font-weight:400;margin-bottom:-1px}
+.tab.on{color:#7dd3fc;border-bottom-color:#7dd3fc;background:rgba(125,211,252,0.04)}
+.panels{flex:1;position:relative;overflow:hidden}
+.panel{position:absolute;inset:0;padding:clamp(5px,1.1vw,9px) clamp(8px,1.6vw,13px) clamp(4px,1vw,8px);opacity:0;transform:translateY(10px);transition:opacity 0.24s,transform 0.24s;pointer-events:none;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:clamp(4px,0.9vw,7px)}
+.panel.on{opacity:1;transform:translateY(0);pointer-events:auto}
+.sect-lbl{font-size:calc(clamp(7px,1vw,8.5px)*var(--panel-size));letter-spacing:0.26em;color:rgba(125,211,252,0.65);text-transform:uppercase;font-weight:400;flex-shrink:0}
+.sched-row{display:flex;gap:6px;align-items:stretch}
+.sched-t{font-family:'Orbitron',monospace;font-size:calc(clamp(8px,1.4vw,11.5px)*var(--panel-size));color:rgba(125,211,252,0.85);white-space:nowrap;padding-top:1px;min-width:clamp(28px,4.8vw,40px);flex-shrink:0}
+.sched-line{width:1px;background:rgba(125,211,252,0.2);flex-shrink:0;margin:2px 0}
+.sched-info{padding-left:5px}
+.sched-name{font-size:calc(clamp(9px,1.55vw,12.5px)*var(--panel-size));color:rgba(255,255,255,0.88);font-weight:500;line-height:1.2}
+.sched-loc{font-size:calc(clamp(7px,1.05vw,9px)*var(--panel-size));color:rgba(255,255,255,0.48);margin-top:1px;letter-spacing:0.04em}
+.no-events{font-size:calc(clamp(8px,1.2vw,10px)*var(--panel-size));color:rgba(255,255,255,0.25);letter-spacing:0.1em;text-transform:uppercase;padding:8px 0}
+.news-card{border-left:1.5px solid rgba(125,211,252,0.3);padding-left:7px}
+.news-src{font-size:calc(clamp(6px,0.95vw,8px)*var(--panel-size));letter-spacing:0.22em;text-transform:uppercase;color:rgba(125,211,252,0.7);margin-bottom:2px;font-weight:500}
+.news-ttl{font-size:calc(clamp(8px,1.45vw,12px)*var(--panel-size));color:rgba(255,255,255,0.82);line-height:1.35;font-weight:400}
+.news-ago{font-size:calc(clamp(6px,0.9vw,7.5px)*var(--panel-size));color:rgba(255,255,255,0.38);margin-top:2px}
+.news-loading{font-size:calc(clamp(8px,1.2vw,10px)*var(--panel-size));color:rgba(255,255,255,0.25);letter-spacing:0.1em;text-transform:uppercase;padding:8px 0}
+.quake-box{border:1px solid rgba(248,113,113,0.4);border-radius:2px;padding:clamp(5px,1vw,8px) clamp(6px,1.2vw,10px);background:rgba(248,60,60,0.05)}
+.quake-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.quake-badge{font-size:calc(clamp(6px,1vw,8.5px)*var(--panel-size));letter-spacing:0.18em;text-transform:uppercase;color:rgba(248,113,113,0.9);font-weight:500}
+.quake-int{font-family:'Orbitron',monospace;font-size:calc(clamp(13px,3vw,24px)*var(--panel-size));color:#f87171;font-weight:900;line-height:1}
+.quake-body{font-size:calc(clamp(8px,1.3vw,10.5px)*var(--panel-size));color:rgba(255,255,255,0.65);line-height:1.7}
+.quake-mag{font-family:'Orbitron',monospace;font-size:calc(clamp(8px,1.2vw,10px)*var(--panel-size));color:rgba(255,170,150,0.9)}
+.no-alert{display:flex;align-items:center;gap:6px;padding:clamp(4px,0.9vw,7px) 0;opacity:0.6}
+.no-alert-txt{font-size:calc(clamp(8px,1.2vw,10px)*var(--panel-size));letter-spacing:0.12em;color:#7dd3fc;text-transform:uppercase}
+.swipe-dots{position:absolute;right:3px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:3px}
+.sdot{width:2px;height:2px;border-radius:50%;background:rgba(255,255,255,0.2);transition:background 0.2s}
+.sdot.on{background:#7dd3fc}
+.foot{display:flex;align-items:center;justify-content:space-between;padding:0 clamp(6px,1.4vw,11px);height:clamp(16px,2.8vw,22px);border-top:1px solid rgba(125,211,252,0.08);flex-shrink:0}
+.st-dots{display:flex;gap:3px;align-items:center}
+.st-dot{width:3px;height:3px;border-radius:50%;background:rgba(125,211,252,0.45);animation:pulse 2.2s ease-in-out infinite}
+.st-dot:nth-child(2){animation-delay:0.55s}
+.st-dot:nth-child(3){animation-delay:1.1s}
+@keyframes pulse{0%,100%{opacity:0.15}50%{opacity:1}}
+.settings-btn{width:clamp(13px,2.4vw,19px);height:clamp(13px,2.4vw,19px);cursor:pointer;opacity:0.55;transition:opacity 0.2s}
+.settings-btn:hover{opacity:1}
+
+/* SETTINGS */
+.overlay{position:absolute;inset:0;background:#04060d;z-index:20;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1)}
+.overlay.open{transform:translateX(0)}
+.ov-hdr{display:flex;align-items:center;justify-content:space-between;padding:clamp(5px,1.1vw,9px) clamp(8px,1.8vw,14px);border-bottom:1px solid rgba(125,211,252,0.12);flex-shrink:0}
+.ov-title{font-size:clamp(8px,1.5vw,12px);letter-spacing:0.24em;text-transform:uppercase;color:#7dd3fc;font-weight:500}
+.close-btn{width:clamp(12px,2.2vw,17px);height:clamp(12px,2.2vw,17px);cursor:pointer;opacity:0.55;transition:opacity 0.2s}
+.close-btn:hover{opacity:1}
+.ov-body{flex:1;overflow-y:auto;padding:clamp(6px,1.4vw,11px) clamp(8px,1.8vw,14px);scrollbar-width:thin;scrollbar-color:rgba(125,211,252,0.2) transparent;display:flex;flex-direction:column;gap:clamp(9px,1.8vw,15px)}
+.s-sec-ttl{font-size:clamp(7px,1.05vw,9px);letter-spacing:0.26em;text-transform:uppercase;color:rgba(125,211,252,0.65);margin-bottom:clamp(4px,0.9vw,7px);font-weight:400;padding-bottom:3px;border-bottom:1px solid rgba(125,211,252,0.1)}
+.s-row{margin-bottom:clamp(5px,1vw,8px)}
+.s-lbl{font-size:clamp(7px,1.05vw,9px);color:rgba(255,255,255,0.55);margin-bottom:3px;letter-spacing:0.08em;display:flex;justify-content:space-between;align-items:center}
+.s-val{font-family:'Orbitron',monospace;font-size:clamp(7px,1.1vw,10px);color:#7dd3fc}
+.s-in{width:100%;background:rgba(125,211,252,0.05);border:1px solid rgba(125,211,252,0.18);border-radius:2px;padding:clamp(3px,0.7vw,5px) clamp(5px,0.9vw,7px);font-size:clamp(7px,1.1vw,9px);color:rgba(255,255,255,0.82);font-family:'Inter','Noto Sans JP',sans-serif;outline:none;transition:border-color 0.2s}
+.s-in:focus{border-color:rgba(125,211,252,0.5)}
+.s-in::placeholder{color:rgba(255,255,255,0.2)}
+.s-slider{width:100%;accent-color:#7dd3fc;cursor:pointer}
+.rss-list{display:flex;flex-direction:column;gap:4px}
+.rss-item{display:flex;align-items:center;gap:4px}
+.rss-del{width:clamp(11px,2vw,15px);height:clamp(11px,2vw,15px);flex-shrink:0;cursor:pointer;opacity:0.45;transition:opacity 0.2s}
+.rss-del:hover{opacity:0.9}
+.add-btn{display:flex;align-items:center;gap:4px;font-size:clamp(7px,1.05vw,9px);color:rgba(125,211,252,0.6);cursor:pointer;letter-spacing:0.12em;padding:clamp(3px,0.7vw,5px) 0;transition:color 0.2s;background:none;border:none;font-family:inherit}
+.add-btn:hover{color:#7dd3fc}
+.save-btn{width:100%;padding:clamp(4px,0.9vw,7px);background:rgba(125,211,252,0.08);border:1px solid rgba(125,211,252,0.25);border-radius:2px;color:#7dd3fc;font-size:clamp(7px,1.2vw,10px);letter-spacing:0.24em;text-transform:uppercase;cursor:pointer;font-family:inherit;font-weight:500;transition:background 0.2s;margin-top:2px}
+.save-btn:hover{background:rgba(125,211,252,0.16)}
+.s-hint{font-size:clamp(6px,0.9vw,8px);color:rgba(255,255,255,0.28);letter-spacing:0.04em;margin-top:3px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="root"><div class="screen" id="screen">
+  <div class="grid-bg"></div>
+  <div class="corner c-tl"></div><div class="corner c-tr"></div>
+  <div class="corner c-bl"></div><div class="corner c-br"></div>
+
+  <div class="left">
+    <div class="clock-section">
+      <div class="clock-label" id="clockLabel">Local Time</div>
+      <div class="clock-row">
+        <div class="digit-cell">
+          <span class="digit" id="dH">00</span>
+          <div class="digit-lbl">Hour</div>
+        </div>
+        <div class="dot-sep"><span></span><span></span></div>
+        <div class="digit-cell">
+          <span class="digit" id="dM">00</span>
+          <div class="digit-lbl">Min</div>
+        </div>
+        <div class="sec-cell">
+          <span class="sec-digit" id="dS">00</span>
+          <div class="sec-lbl">Sec</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="meta-row">
+      <div>
+        <div class="date-main" id="dMain">----.--.--</div>
+        <div class="date-sub" id="dSub">-------</div>
+      </div>
+      <div class="divider-v"></div>
+      <div class="weather-block">
+        <svg class="wx-icon" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="4.5" fill="#7dd3fc" opacity="0.75"/>
+          <g stroke="#7dd3fc" stroke-width="1.3" stroke-linecap="round" opacity="0.45">
+            <line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/>
+            <line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/>
+            <line x1="4.4" y1="4.4" x2="6.2" y2="6.2"/><line x1="17.8" y1="17.8" x2="19.6" y2="19.6"/>
+            <line x1="19.6" y1="4.4" x2="17.8" y2="6.2"/><line x1="6.2" y1="17.8" x2="4.4" y2="19.6"/>
+          </g>
+        </svg>
+        <div class="wx-temp" id="wxTemp">--</div>
+        <div class="wx-right">
+          <div class="wx-loc" id="wxLoc">--</div>
+          <div class="wx-desc" id="wxDesc">--</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="tab-bar">
+      <div class="tab on" id="tb0" onclick="sw(0)">Schedule</div>
+      <div class="tab" id="tb1" onclick="sw(1)">News</div>
+      <div class="tab" id="tb2" onclick="sw(2)">Quake</div>
+    </div>
+    <div class="panels" id="panels">
+      <div class="panel on" id="p0">
+        <div class="sect-lbl" id="schedLbl">本日の予定</div>
+        <div id="schedList"><div class="no-events">カレンダーURLを設定してください</div></div>
+      </div>
+      <div class="panel" id="p1">
+        <div class="sect-lbl">RSS フィード</div>
+        <div id="newsList"><div class="news-loading">RSSフィードを設定してください</div></div>
+      </div>
+      <div class="panel" id="p2">
+        <div class="sect-lbl">緊急地震速報</div>
+        <div id="quakeContent"><div class="no-alert"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg><div class="no-alert-txt">現在 警戒情報なし</div></div></div>
+      </div>
+      <div class="swipe-dots">
+        <div class="sdot on" id="sd0"></div><div class="sdot" id="sd1"></div><div class="sdot" id="sd2"></div>
+      </div>
+    </div>
+    <div class="foot">
+      <div class="st-dots"><div class="st-dot"></div><div class="st-dot"></div><div class="st-dot"></div></div>
+      <div class="settings-btn" onclick="openS()" title="設定">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="ov-hdr">
+        <div class="ov-title">Settings</div>
+        <div class="close-btn" onclick="closeS()"><svg viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+      </div>
+      <div class="ov-body">
+        <div>
+          <div class="s-sec-ttl">Display Size / 表示サイズ</div>
+          <div class="s-row">
+            <div class="s-lbl">時計サイズ <span class="s-val" id="lblClock">1.00</span></div>
+            <input type="range" class="s-slider" id="slClock" min="0.5" max="1.5" step="0.05" value="1.0">
+          </div>
+          <div class="s-row">
+            <div class="s-lbl">日付・天気サイズ <span class="s-val" id="lblInfo">1.00</span></div>
+            <input type="range" class="s-slider" id="slInfo" min="0.5" max="1.5" step="0.05" value="1.0">
+          </div>
+          <div class="s-row">
+            <div class="s-lbl">右パネル文字サイズ <span class="s-val" id="lblPanel">1.00</span></div>
+            <input type="range" class="s-slider" id="slPanel" min="0.5" max="1.5" step="0.05" value="1.0">
+          </div>
+        </div>
+        <div>
+          <div class="s-sec-ttl">Calendar / 予定</div>
+          <div class="s-row">
+            <div class="s-lbl">Google Calendar iCal URL</div>
+            <input class="s-in" id="cfgCalUrl" type="text" placeholder="https://calendar.google.com/calendar/ical/xxx/basic.ics"/>
+            <div class="s-hint">Google Calendar → 設定 → カレンダーの設定 →「カレンダーのアドレス」ICALボタン</div>
+          </div>
+          <div class="s-row">
+            <div class="s-lbl">表示件数</div>
+            <input class="s-in" id="cfgCalCount" type="number" value="5" min="1" max="20" style="width:60px"/>
+          </div>
+        </div>
+        <div>
+          <div class="s-sec-ttl">Weather / 天気</div>
+          <div class="s-row"><div class="s-lbl">地点名（表示用）</div><input class="s-in" id="cfgWxName" type="text" placeholder="Sapporo"/></div>
+          <div class="s-row"><div class="s-lbl">緯度</div><input class="s-in" id="cfgWxLat" type="text" placeholder="43.0618"/><div class="s-hint">札幌:43.0618 / 東京:35.6895 / 大阪:34.6937</div></div>
+          <div class="s-row"><div class="s-lbl">経度</div><input class="s-in" id="cfgWxLon" type="text" placeholder="141.3545"/><div class="s-hint">札幌:141.3545 / 東京:139.6917 / 大阪:135.5023</div></div>
+          <div class="s-row">
+            <div class="s-lbl">気温単位</div>
+            <div style="display:flex;gap:10px;margin-top:3px">
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:clamp(7px,1.1vw,9px);color:rgba(255,255,255,0.6)"><input type="radio" name="cfgUnit" value="celsius" checked style="accent-color:#7dd3fc"> °C</label>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:clamp(7px,1.1vw,9px);color:rgba(255,255,255,0.6)"><input type="radio" name="cfgUnit" value="fahrenheit" style="accent-color:#7dd3fc"> °F</label>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="s-sec-ttl">RSS フィード</div>
+          <div class="rss-list" id="rssList"></div>
+          <button class="add-btn" onclick="addRss()"><svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#7dd3fc" stroke-width="1.5" stroke-linecap="round"><line x1="4.5" y1="1" x2="4.5" y2="8"/><line x1="1" y1="4.5" x2="8" y2="4.5"/></svg>フィードを追加</button>
+          <div class="s-hint" style="margin-top:6px">allorigins.win プロキシ経由で取得します</div>
+        </div>
+        <button class="save-btn" onclick="saveS()">Save &amp; Apply</button>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+const DEFAULTS={calUrl:'',calCount:5,wxName:'Sapporo',wxLat:'43.0618',wxLon:'141.3545',wxUnit:'celsius',rssFeeds:['https://www3.nhk.or.jp/rss/news/cat0.xml'],clockSize:1.0,infoSize:1.0,panelSize:1.0};
+function loadCfg(){try{return Object.assign({},DEFAULTS,JSON.parse(localStorage.getItem('dashCfg')||'{}'));}catch(e){return{...DEFAULTS};}}
+function saveCfg(c){localStorage.setItem('dashCfg',JSON.stringify(c));}
+function applyScales(c){
+  const r=document.documentElement;
+  r.style.setProperty('--clock-size',c.clockSize||1.0);
+  r.style.setProperty('--info-size', c.infoSize||1.0);
+  r.style.setProperty('--panel-size',c.panelSize||1.0);
+}
+
+const p2=s=>String(s).padStart(2,'0');
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function tick(){
+  const n=new Date();
+  document.getElementById('dH').textContent=p2(n.getHours());
+  document.getElementById('dM').textContent=p2(n.getMinutes());
+  document.getElementById('dS').textContent=p2(n.getSeconds());
+  document.getElementById('dMain').textContent=n.getFullYear()+'.'+p2(n.getMonth()+1)+'.'+p2(n.getDate());
+  document.getElementById('dSub').textContent=DAYS[n.getDay()];
+}
+tick();setInterval(tick,1000);
+
+let cur=0;
+function sw(i){[0,1,2].forEach(j=>{document.getElementById('tb'+j).classList.toggle('on',j===i);document.getElementById('p'+j).classList.toggle('on',j===i);document.getElementById('sd'+j).classList.toggle('on',j===i);});cur=i;}
+const pnl=document.getElementById('panels');
+let sy=0;
+pnl.addEventListener('touchstart',e=>{sy=e.touches[0].clientY;},{passive:true});
+pnl.addEventListener('touchend',e=>{const d=sy-e.changedTouches[0].clientY;if(Math.abs(d)>18){if(d>0&&cur<2)sw(cur+1);if(d<0&&cur>0)sw(cur-1);}});
+pnl.addEventListener('wheel',e=>{if(e.deltaY>10&&cur<2)sw(cur+1);if(e.deltaY<-10&&cur>0)sw(cur-1);},{passive:true});
+
+function openS(){
+  const c=loadCfg();
+  [['Clock','clockSize'],['Info','infoSize'],['Panel','panelSize']].forEach(([k,key])=>{
+    const sl=document.getElementById('sl'+k);
+    const lb=document.getElementById('lbl'+k);
+    sl.value=c[key]||1.0;
+    lb.textContent=parseFloat(c[key]||1.0).toFixed(2);
+    sl.oninput=()=>{lb.textContent=parseFloat(sl.value).toFixed(2);livePreview();};
+  });
+  document.getElementById('cfgCalUrl').value=c.calUrl||'';
+  document.getElementById('cfgCalCount').value=c.calCount||5;
+  document.getElementById('cfgWxName').value=c.wxName||'';
+  document.getElementById('cfgWxLat').value=c.wxLat||'';
+  document.getElementById('cfgWxLon').value=c.wxLon||'';
+  document.querySelectorAll('input[name="cfgUnit"]').forEach(r=>r.checked=(r.value===(c.wxUnit||'celsius')));
+  renderRssList(c.rssFeeds||[]);
+  document.getElementById('overlay').classList.add('open');
+}
+function livePreview(){
+  applyScales({
+    clockSize:parseFloat(document.getElementById('slClock').value),
+    infoSize: parseFloat(document.getElementById('slInfo').value),
+    panelSize:parseFloat(document.getElementById('slPanel').value),
+  });
+}
+function closeS(){document.getElementById('overlay').classList.remove('open');}
+function renderRssList(feeds){
+  const el=document.getElementById('rssList');el.innerHTML='';
+  feeds.forEach((url,i)=>{
+    const row=document.createElement('div');row.className='rss-item';
+    row.innerHTML=`<input class="s-in" type="text" value="${url}" style="flex:1" data-rss-idx="${i}"/><div class="rss-del" onclick="delRss(${i})" style="width:clamp(11px,2vw,15px);height:clamp(11px,2vw,15px);flex-shrink:0;cursor:pointer;opacity:0.45"><svg viewBox="0 0 16 16" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg></div>`;
+    el.appendChild(row);
+  });
+}
+function addRss(){const c=loadCfg();c.rssFeeds=getRssInputs();c.rssFeeds.push('');saveCfg(c);renderRssList(c.rssFeeds);}
+function delRss(i){const c=loadCfg();c.rssFeeds=getRssInputs();c.rssFeeds.splice(i,1);saveCfg(c);renderRssList(c.rssFeeds);}
+function getRssInputs(){return Array.from(document.querySelectorAll('[data-rss-idx]')).map(e=>e.value.trim()).filter(Boolean);}
+function saveS(){
+  const c={
+    calUrl:document.getElementById('cfgCalUrl').value.trim(),
+    calCount:parseInt(document.getElementById('cfgCalCount').value)||5,
+    wxName:document.getElementById('cfgWxName').value.trim(),
+    wxLat:document.getElementById('cfgWxLat').value.trim(),
+    wxLon:document.getElementById('cfgWxLon').value.trim(),
+    wxUnit:document.querySelector('input[name="cfgUnit"]:checked').value,
+    rssFeeds:getRssInputs(),
+    clockSize:parseFloat(document.getElementById('slClock').value),
+    infoSize: parseFloat(document.getElementById('slInfo').value),
+    panelSize:parseFloat(document.getElementById('slPanel').value),
+  };
+  saveCfg(c);applyScales(c);closeS();initAll();
+}
+
+const WX_CODES={0:'快晴',1:'晴れ',2:'一部曇り',3:'曇り',45:'霧',48:'霧氷',51:'小雨',53:'雨',55:'強雨',61:'小雨',63:'雨',65:'大雨',71:'小雪',73:'雪',75:'大雪',80:'にわか雨',81:'雨',82:'大雨',95:'雷雨',99:'激しい雷雨'};
+async function fetchWeather(){
+  const c=loadCfg();
+  if(!c.wxLat||!c.wxLon){document.getElementById('wxDesc').textContent='緯度経度を設定';return;}
+  const unit=c.wxUnit||'celsius';const us=unit==='fahrenheit'?'°F':'°C';
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.wxLat}&longitude=${c.wxLon}&current=temperature_2m,weathercode&temperature_unit=${unit}&timezone=auto`);
+    const d=await r.json();
+    document.getElementById('wxTemp').textContent=Math.round(d.current.temperature_2m)+us;
+    document.getElementById('wxDesc').textContent=WX_CODES[d.current.weathercode]||'コード:'+d.current.weathercode;
+    document.getElementById('wxLoc').textContent=c.wxName||'---';
+    document.getElementById('clockLabel').textContent=c.wxName?`Local Time — ${c.wxName}`:'Local Time';
+  }catch(e){document.getElementById('wxDesc').textContent='取得失敗';}
+}
+
+function timeAgo(ds){const m=(Date.now()-new Date(ds))/60000;if(m<60)return Math.floor(m)+' min ago';if(m<1440)return Math.floor(m/60)+' hr ago';return Math.floor(m/1440)+' days ago';}
+async function fetchRss(){
+  const c=loadCfg();const feeds=c.rssFeeds||[];const el=document.getElementById('newsList');
+  if(!feeds.length){el.innerHTML='<div class="news-loading">RSSフィードを設定してください</div>';return;}
+  el.innerHTML='<div class="news-loading">読み込み中...</div>';
+  const items=[];
+  for(const url of feeds){
+    try{
+      const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      const d=await r.json();
+      const xml=new DOMParser().parseFromString(d.contents,'text/xml');
+      const src=(xml.querySelector('channel > title, feed > title')?.textContent||url).trim().substring(0,20);
+      xml.querySelectorAll('item, entry').forEach(item=>{
+        const title=item.querySelector('title')?.textContent?.trim()||'';
+        const pub=item.querySelector('pubDate,published,updated')?.textContent||'';
+        items.push({title,pub,src});
+      });
+    }catch(e){}
+  }
+  items.sort((a,b)=>new Date(b.pub)-new Date(a.pub));
+  if(!items.length){el.innerHTML='<div class="news-loading">記事を取得できませんでした</div>';return;}
+  el.innerHTML=items.slice(0,8).map(i=>`<div class="news-card"><div class="news-src">${i.src}</div><div class="news-ttl">${i.title}</div><div class="news-ago">${i.pub?timeAgo(i.pub):''}</div></div>`).join('');
+}
+
+async function fetchQuake(){
+  const el=document.getElementById('quakeContent');
+  try{
+    const r=await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=1');
+    const d=await r.json();
+    if(!d.length){renderNoAlert(el);return;}
+    const q=d[0];const info=q.earthquake||{};const hypo=info.hypocenter||{};
+    const intStr=info.maxScale!==undefined?scaleToStr(info.maxScale):'---';
+    const mag=hypo.magnitude!==undefined?hypo.magnitude.toFixed(1):'--';
+    const place=hypo.name||'---';const depth=hypo.depth!==undefined?hypo.depth+'km':'--';
+    const t=q.time?new Date(q.time).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})+' JST':'';
+    el.innerHTML=`<div class="quake-box"><div class="quake-hdr"><div class="quake-badge">最新情報${t?' — '+t:''}</div><div class="quake-int">震度 ${intStr}</div></div><div class="quake-body">発生地域：<span style="color:rgba(255,255,255,0.88)">${place}</span>　深さ：${depth}　<span class="quake-mag">M ${mag}</span></div></div><div class="no-alert" style="margin-top:6px"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg><div class="no-alert-txt">現在 警戒情報なし</div></div>`;
+  }catch(e){renderNoAlert(el);}
+}
+function renderNoAlert(el){el.innerHTML=`<div class="no-alert"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#7dd3fc" stroke-width="1"/><line x1="7" y1="4.5" x2="7" y2="8" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="#7dd3fc"/></svg><div class="no-alert-txt">現在 警戒情報なし</div></div>`;}
+function scaleToStr(s){return{10:'1',20:'2',30:'3',40:'4',45:'5弱',50:'5強',55:'6弱',60:'6強',70:'7'}[s]||s;}
+
+async function fetchCalendar(){
+  const c=loadCfg();const el=document.getElementById('schedList');
+  const today=new Date();
+  document.getElementById('schedLbl').textContent='本日の予定 — '+today.getFullYear()+'.'+p2(today.getMonth()+1)+'.'+p2(today.getDate());
+  if(!c.calUrl){el.innerHTML='<div class="no-events">カレンダーURLを設定してください</div>';return;}
+  el.innerHTML='<div class="no-events">読み込み中...</div>';
+  try{
+    const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(c.calUrl)}`);
+    const d=await r.json();
+    const events=parseIcal(d.contents,today,c.calCount||5);
+    if(!events.length){el.innerHTML='<div class="no-events">本日の予定はありません</div>';return;}
+    el.innerHTML=events.map(ev=>`<div class="sched-row"><div class="sched-t">${ev.time}</div><div class="sched-line"></div><div class="sched-info"><div class="sched-name">${ev.title}</div><div class="sched-loc">${ev.loc}</div></div></div>`).join('');
+  }catch(e){el.innerHTML='<div class="no-events">カレンダーの取得に失敗しました</div>';}
+}
+function parseIcal(raw,today,limit){
+  const events=[];const todayStr=today.getFullYear()+p2(today.getMonth()+1)+p2(today.getDate());
+  raw.split('BEGIN:VEVENT').slice(1).forEach(block=>{
+    const get=key=>{const m=block.match(new RegExp(key+'[^:]*:([^\\r\\n]*)'));return m?m[1].trim():'';};
+    const dtstart=get('DTSTART');const summary=get('SUMMARY')||'（タイトルなし）';const location=get('LOCATION')||'';
+    if(!dtstart.startsWith(todayStr))return;
+    const timeStr=dtstart.length>=15?dtstart.slice(9,11)+':'+dtstart.slice(11,13):'終日';
+    events.push({time:timeStr,title:summary,loc:location,sort:dtstart});
+  });
+  return events.sort((a,b)=>a.sort.localeCompare(b.sort)).slice(0,limit);
+}
+
+function initAll(){
+  const c=loadCfg();applyScales(c);
+  document.getElementById('wxLoc').textContent=c.wxName||'--';
+  document.getElementById('clockLabel').textContent=c.wxName?`Local Time — ${c.wxName}`:'Local Time';
+  fetchWeather();fetchRss();fetchQuake();fetchCalendar();
+}
+initAll();
+setInterval(fetchWeather,10*60*1000);
+setInterval(fetchRss,5*60*1000);
+setInterval(fetchQuake,60*1000);
+setInterval(fetchCalendar,15*60*1000);
+</script>
+<script>if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}</script>
+</body>
+</html>
